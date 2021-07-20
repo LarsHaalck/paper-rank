@@ -1,0 +1,13 @@
+[global]
+template_dir = "templates"
+
+[global.databases.sqlite_database]
+url = "db/db.sqlite"
+
+[production]
+address = "127.0.0.1"
+port = 8000
+workers = 2
+log = "critical"
+secret_key = ""
+limits = { forms = 8192 }

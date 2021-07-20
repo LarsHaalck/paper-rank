@@ -1,0 +1,12 @@
+[package]
+name = "voters"
+version = "0.0.1"
+publish = false
+
+license = "MIT/Apache-2.0"
+
+[dependencies]
+rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
+diesel = { version = "1.4.7", features = ["sqlite", "r2d2"] }
+itertools = "0.10"
+rcir = "0.3"
