@@ -2,11 +2,20 @@
 name = "voters"
 version = "0.0.1"
 publish = false
-
+edition = "2018"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-rocket = { version = "0.5.0-rc.1", features = ["secrets"] }
+rocket = { version = "0.5.0-rc.1", features = ["secrets", "json"] }
 diesel = { version = "1.4.7", features = ["sqlite", "r2d2"] }
+serde = "1.0.126"
 itertools = "0.10"
 rcir = "0.3"
+
+[dependencies.rocket_dyn_templates]
+version = "0.1.0-rc.1"
+features = ["tera"]
+
+[dependencies.rocket_sync_db_pools]
+version = "0.1.0-rc.1"
+features = ["diesel_sqlite_pool"]

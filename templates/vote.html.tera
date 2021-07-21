@@ -1,0 +1,101 @@
+{% extends "base" %}
+{% block content %}
+{% if winner %}
+<div class="card border-primary mt-3">
+  <div class="card-header bg-primary text-white">
+    Unless you change the vote, the next paper will be:
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">{{ winner.title }}</h5>
+    <div class="card-text">{{ winner.body }}</div>
+  </div>
+</div>
+{% if second %}
+<div class="card border-info mt-3">
+  <div class="card-header bg-info text-white">
+    The runner-up in this election is:
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">{{ second.title }}</h5>
+    <div class="card-text">{{ second.body }}</div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+<div class="alert alert-info mt-3" role="alert">
+  Drag and drop the candidates below into your order of preference.
+  Candidates under the gray bar are ignored.
+</div>
+<style>
+.list-group-item .badge {
+    cursor: grab;
+    float: right;
+}
+.list-group-item.sortable-chosen .badge {
+    cursor: grabbing;
+}
+.list-group-item-dark { font-weight: bold; }
+.list-group-item-dark ~ div {
+    opacity: 0.5;
+}
+</style>
+<div id="ballot" class="list-group mt-3">
+    {% for item in items %}
+    {% if item.1 is number %}
+    {% if not item.0.done %}
+    <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
+        <span class="badge badge-info">drag here</span>
+        <h5 class="mb-1">{{ item.0.title }}</h5>
+        <div class="mb-1">{{ item.0.body }}</div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+
+    <div class="list-group-item list-group-item-action list-group-item-dark" data-id="void">I do not want to vote for the following:</div>
+
+    {% for item in items %}
+    {% if not item.1 is number %}
+    {% if not item.0.done %}
+    <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
+        <span class="badge badge-info">drag here</span>
+        <h5 class="mb-1">{{ item.0.title }}</h5>
+        <div class="mb-1">{{ item.0.body }}</div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.8.1/Sortable.min.js"></script>
+<script>
+if (location.href.indexOf('login') !== -1) {
+    location.href = location.href.replace("/login", "/");
+}
+
+var sortable = Sortable.create(document.getElementById('ballot'), {
+    handle: ".badge",
+    scroll: true,
+    onUpdate: function (evt) {
+        var order = sortable.toArray();
+        var votes = [];
+        for (const o of order) {
+            if (o == "void") { break; }
+            votes.push(+o);
+        }
+
+        fetch("vote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=utf-8", },
+            body: JSON.stringify({"votes": votes}),
+        }).then(function(e) {
+            if (!e.ok) {
+                alert(
+                    "Your vote couldn't be registered!\n" +
+                    "Try refreshing the page, or use a different browser.\n" +
+                    "If the issue persists, please write a mail to Lars.");
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
