@@ -7,16 +7,15 @@ extern crate rocket_sync_db_pools;
 
 mod schema;
 
-// use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
-
 use rocket::form::Form;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::serde::{Serialize, json::Json};
-
 use rocket_dyn_templates::Template;
+
+use comrak::{markdown_to_html, ComrakOptions};
 
 use schema::{Item, NewUser, Vote, Ballot};
 
@@ -107,6 +106,16 @@ async fn vote(ballot: Json<Ballot>, user: Auth, conn: DbConn) -> Status {
     }
 }
 
+#[post("/new", data = "<markdown>")]
+async fn preview(markdown: &str, _user: Auth, _conn: DbConn) -> String {
+    markdown_to_html(markdown, &ComrakOptions::default())
+}
+
+#[get("/new")]
+async fn new(user: Auth, conn: DbConn) -> Template {
+    Template::render("new", Context::for_user(user, &conn).await)
+}
+
 #[get("/")]
 async fn votes(user: Auth, conn: DbConn) -> Template {
     Template::render("vote", Context::for_user(user, &conn).await)
@@ -123,5 +132,5 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .mount("/", routes![index, login, votes, vote])
+        .mount("/", routes![index, login, votes, vote, new, preview])
 }

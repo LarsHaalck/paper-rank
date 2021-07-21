@@ -1,0 +1,58 @@
+{% extends "base" %}
+{% block content %}
+<style>
+#markdown, #render, #send, #preview {
+    width: 100%;
+}
+
+</style>
+<div class="container">
+  <div class="row">
+    <div class="col">
+    <textarea id="markdown">
+    {% if markdown %}
+        {{ markdown }}
+    {% endif %}
+    </textarea>
+    <div class="row">
+        <div class="col">
+            <button id="preview" type="submit" class="mt-3 btn btn-primary">Preview</button>
+        </div>
+        <div class="col">
+            <button id="send" type="submit" class="mt-3 btn btn-secondary">Send</button>
+        </div>
+        </div>
+    </div>
+    <div class="col">
+        <div id="render">
+        {% if render %}
+            {{ render }}
+        {% endif %}
+        </div>
+    </div>
+  </div>
+</div>
+<script>
+var preview_btn = document.getElementById("preview");
+var markdown = document.getElementById("markdown");
+var render = document.getElementById("render");
+preview_btn.addEventListener("click", getPreview);
+
+function getPreview() {
+    fetch("new", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain; charset=utf-8", },
+        body: markdown.value,
+    }).then(e => {
+        if (!e.ok) {
+            alert(
+                "Failed to render markdown\n" +
+                "Try refreshing the page, or use a different browser.\n" +
+                "If the issue persists, please write a mail to Lars.");
+        } else {
+           e.text().then(f => render.innerHTML = f);
+        }
+    });
+}
+</script>
+{% endblock %}
