@@ -13,7 +13,7 @@
     </head>
     <body>
         <nav class="navbar navbar-dark bg-primary">
-          <span class="navbar-brand mb-0 h1">Vote for the next paper</span>
+          <a class="navbar-brand mb-0 h1" href="/">Vote for the next paper</a>
         </nav>
         <div class="container pt-3">
             {% if flash %}
