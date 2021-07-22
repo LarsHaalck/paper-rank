@@ -27,14 +27,34 @@
 }
 
 </style>
-<h1>Submit new paper idea</h2>
 <div class="container">
+  <h1>Submit new paper idea</h2>
+  <div id="description">
+      Please add the title to the last field and try to fill the information as outlined in the editor
+  </div>
   <div class="row">
     <div class="col">
     <h4>Markdown:</h4>
     <hr>
     <form action="new" method="post" class="mt-3" id="new_form"></form>
-    <textarea id="markdown" class="p-2", form="new_form" name="body" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required></textarea>
+    <textarea id="markdown" class="p-2", form="new_form" name="body" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required>
+**Topic:**
+
+1-2 sentences about the topic
+
+-------
+**Notes:**
+
+Conference or something else you want to say about the paper
+
+-------
+**Links:**
+
+Links, e.g. Github, Youtube, Springer, Arxiv, Projectpage:
+* [link1](https://link1.com)
+* [link2](https://link2.com)
+* [link3](https://link3.com)
+    </textarea>
     <input form="new_form" class="form-control" type="text" placeholder="Enter Paper Title" name="title" required autofocus />
     <div class="row">
         <div class="col">
