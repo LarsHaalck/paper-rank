@@ -7,13 +7,9 @@
   </div>
   <div class="card-body">
     <h5 class="card-title">{{ winner.title }}</h5>
-    <div class="card-text">{{ winner.body }}</div>
+    <hr>
+    <div class="card-text">{{ winner.body | safe }}</div>
   </div>
-</div>
-{% endif %}
-{% if flash %}
-<div class="alert alert-danger mt-3" role="alert">
-{{ flash.0 }}: {{ flash.1 }}
 </div>
 {% endif %}
 <form action="login" method="post" class="mt-3">

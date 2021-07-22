@@ -7,7 +7,8 @@
   </div>
   <div class="card-body">
     <h5 class="card-title">{{ winner.title }}</h5>
-    <div class="card-text">{{ winner.body }}</div>
+    <hr>
+    <div class="card-text">{{ winner.body | safe }}</div>
   </div>
 </div>
 {% if second %}
@@ -17,7 +18,8 @@
   </div>
   <div class="card-body">
     <h5 class="card-title">{{ second.title }}</h5>
-    <div class="card-text">{{ second.body }}</div>
+    <hr>
+    <div class="card-text">{{ second.body | safe }}</div>
   </div>
 </div>
 {% endif %}
@@ -46,7 +48,8 @@
     <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
         <span class="badge badge-info">drag here</span>
         <h5 class="mb-1">{{ item.0.title }}</h5>
-        <div class="mb-1">{{ item.0.body }}</div>
+        <hr>
+        <div class="mb-1">{{ item.0.body | safe }}</div>
     </div>
     {% endif %}
     {% endif %}
@@ -60,7 +63,8 @@
     <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
         <span class="badge badge-info">drag here</span>
         <h5 class="mb-1">{{ item.0.title }}</h5>
-        <div class="mb-1">{{ item.0.body }}</div>
+        <hr>
+        <div class="mb-1">{{ item.0.body | safe }}</div>
     </div>
     {% endif %}
     {% endif %}

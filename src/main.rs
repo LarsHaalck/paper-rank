@@ -7,17 +7,17 @@ extern crate rocket_sync_db_pools;
 
 mod schema;
 
-use rocket::response::{Flash, Redirect};
 use rocket::form::Form;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
-use rocket::serde::{Serialize, json::Json};
+use rocket::response::{Flash, Redirect};
+use rocket::serde::{json::Json, Serialize};
 use rocket_dyn_templates::Template;
 
 use comrak::{markdown_to_html, ComrakOptions};
 
-use schema::{Item, NewUser, Vote, Ballot};
+use schema::{Ballot, Item, ItemData, NewUser, Vote};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -41,14 +41,14 @@ impl Context {
         }
     }
 
-    pub async fn for_user(user: Auth, conn: &DbConn) -> Context {
+    pub async fn for_user(user: Auth, conn: &DbConn, flash: Option<(String, String)>) -> Context {
         let winner = Vote::run_election(conn).await;
         let second = Vote::run_second_election(conn, winner.clone()).await;
         Context {
             winner,
             second,
             items: Item::for_user(user.0, conn).await,
-            flash: None,
+            flash,
         }
     }
 }
@@ -102,23 +102,48 @@ async fn vote(ballot: Json<Ballot>, user: Auth, conn: DbConn) -> Status {
     let res = Vote::save_ballot(user.0, ballot.into_inner(), &conn).await;
     match res {
         Some(_) => Status::Ok,
-        None => Status::NotAcceptable
+        None => Status::NotAcceptable,
     }
 }
 
-#[post("/new", data = "<markdown>")]
+#[post("/preview", data = "<markdown>")]
 async fn preview(markdown: &str, _user: Auth, _conn: DbConn) -> String {
     markdown_to_html(markdown, &ComrakOptions::default())
 }
 
+#[post("/new", data = "<item>")]
+async fn new_item(
+    item: Form<ItemData>,
+    _user: Auth,
+    conn: DbConn,
+) -> Flash<Redirect> {
+    let mut item_data = item.into_inner();
+    item_data.body = markdown_to_html(&item_data.body, &ComrakOptions::default());
+    let res = item_data.add(&conn).await;
+    match res {
+        Some(_) => Flash::success(
+            Redirect::to(uri!(index)),
+            "Added item to db",
+        ),
+        None => Flash::error(
+            Redirect::to(uri!(new)),
+            "Failed to insert item into db",
+        ),
+    }
+    // Redirect::to(uri!(index))
+    // markdown_to_html(markdown, &ComrakOptions::default())
+}
+
 #[get("/new")]
-async fn new(user: Auth, conn: DbConn) -> Template {
-    Template::render("new", Context::for_user(user, &conn).await)
+async fn new(flash: Option<FlashMessage<'_>>, user: Auth, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render("new", Context::for_user(user, &conn, flash).await)
 }
 
 #[get("/")]
-async fn votes(user: Auth, conn: DbConn) -> Template {
-    Template::render("vote", Context::for_user(user, &conn).await)
+async fn votes(flash: Option<FlashMessage<'_>>, user: Auth, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render("vote", Context::for_user(user, &conn, flash).await)
 }
 
 #[get("/", rank = 2)]
@@ -132,5 +157,8 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .mount("/", routes![index, login, votes, vote, new, preview])
+        .mount(
+            "/",
+            routes![index, login, votes, vote, new, preview, new_item],
+        )
 }

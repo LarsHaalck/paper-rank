@@ -16,6 +16,17 @@
           <span class="navbar-brand mb-0 h1">Vote for the next paper</span>
         </nav>
         <div class="container pt-3">
+            {% if flash %}
+                {% if flash.0 == "error" %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        {{ flash.0 }}: {{ flash.1 }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mt-3" role="alert">
+                        {{ flash.0 }}: {{ flash.1 }}
+                    </div>
+                {% endif %}
+            {% endif %}
             {% block content %}{% endblock content %}
         </div>
     </body>

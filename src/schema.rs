@@ -35,8 +35,8 @@ mod schema {
     allow_tables_to_appear_in_same_query!(users, items, votes);
 }
 
-use self::schema::users;
 use self::schema::votes;
+use self::schema::items;
 
 #[derive(Queryable, Debug)]
 pub struct User {
@@ -70,7 +70,14 @@ pub struct Ballot {
 }
 
 #[derive(FromForm, Insertable)]
-#[table_name = "users"]
+#[table_name = "items"]
+pub struct ItemData {
+    pub title: String,
+    pub body: String,
+}
+
+
+#[derive(FromForm)]
 pub struct NewUser {
     pub username: String,
 }
@@ -100,6 +107,19 @@ impl Item {
                 .select((self::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(c)
                 .unwrap_or(Vec::new())
+        })
+        .await
+    }
+}
+
+impl ItemData {
+    pub async fn add(self, conn: &DbConn) -> Option<()> {
+        conn.run(move |c| {
+            diesel::insert_into(self::schema::items::table)
+                .values(&self)
+                .execute(c)
+                .ok()?;
+            Some(())
         })
         .await
     }
