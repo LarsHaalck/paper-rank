@@ -4,10 +4,14 @@ template_dir = "templates"
 [global.databases.sqlite_database]
 url = "db/db.sqlite"
 
-[production]
+[default]
 address = "127.0.0.1"
 port = 8000
 workers = 2
-log = "critical"
-secret_key = ""
+log_level = "info"
 limits = { forms = 8192 }
+
+[release]
+# overriden by env
+secret_key = "b58Pha6gtMwxUHtcJsqn8fkZYi9/g42pVpJ3Lq2ljtU="
+log_level = "critical"
