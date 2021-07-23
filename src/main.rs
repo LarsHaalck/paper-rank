@@ -16,6 +16,7 @@ use rocket::response::{Flash, Redirect};
 use rocket::serde::{json::Json, Serialize};
 use rocket_dyn_templates::Template;
 use schema::{Ballot, Item, ItemData, NewUser, Vote};
+use rocket::fs::{FileServer, relative};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -147,4 +148,5 @@ fn rocket() -> _ {
             "/",
             routes![index, login, votes, vote, new, preview, new_item],
         )
+        .mount("/", FileServer::from(relative!("static")))
 }
