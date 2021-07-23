@@ -7,6 +7,7 @@ extern crate rocket_sync_db_pools;
 
 mod schema;
 
+use comrak::{markdown_to_html, ComrakOptions};
 use rocket::form::Form;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::outcome::IntoOutcome;
@@ -14,9 +15,6 @@ use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Flash, Redirect};
 use rocket::serde::{json::Json, Serialize};
 use rocket_dyn_templates::Template;
-
-use comrak::{markdown_to_html, ComrakOptions};
-
 use schema::{Ballot, Item, ItemData, NewUser, Vote};
 
 #[database("sqlite_database")]
@@ -112,26 +110,14 @@ async fn preview(markdown: &str, _user: Auth, _conn: DbConn) -> String {
 }
 
 #[post("/new", data = "<item>")]
-async fn new_item(
-    item: Form<ItemData>,
-    _user: Auth,
-    conn: DbConn,
-) -> Flash<Redirect> {
+async fn new_item(item: Form<ItemData>, _user: Auth, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
     item_data.body = markdown_to_html(&item_data.body, &ComrakOptions::default());
     let res = item_data.add(&conn).await;
     match res {
-        Some(_) => Flash::success(
-            Redirect::to(uri!(index)),
-            "Added item to db",
-        ),
-        None => Flash::error(
-            Redirect::to(uri!(new)),
-            "Failed to insert item into db",
-        ),
+        Some(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
+        None => Flash::error(Redirect::to(uri!(new)), "Failed to insert item into db"),
     }
-    // Redirect::to(uri!(index))
-    // markdown_to_html(markdown, &ComrakOptions::default())
 }
 
 #[get("/new")]

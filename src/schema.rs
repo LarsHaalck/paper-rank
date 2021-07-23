@@ -35,8 +35,8 @@ mod schema {
     allow_tables_to_appear_in_same_query!(users, items, votes);
 }
 
-use self::schema::votes;
 use self::schema::items;
+use self::schema::votes;
 
 #[derive(Queryable, Debug)]
 pub struct User {
@@ -62,7 +62,9 @@ pub struct Vote {
 
 use self::schema::items::dsl::{done as item_done, items as all_items};
 use self::schema::users::dsl::{username as users_uname, users as all_users};
-use self::schema::votes::dsl::{item_id, ordinal, user_id, votes as all_votes};
+use self::schema::votes::dsl::{
+    item_id as vote_item_id, ordinal, user_id as vote_user_id, votes as all_votes,
+};
 
 #[derive(Deserialize)]
 pub struct Ballot {
@@ -75,7 +77,6 @@ pub struct ItemData {
     pub title: String,
     pub body: String,
 }
-
 
 #[derive(FromForm)]
 pub struct NewUser {
@@ -99,11 +100,12 @@ impl Item {
         conn.run(move |c| {
             all_items
                 .left_join(
-                    self::schema::votes::table
-                        .on(user_id.eq(&uid).and(item_id.eq(self::schema::items::id))),
+                    all_votes.on(vote_user_id
+                        .eq(&uid)
+                        .and(vote_item_id.eq(self::schema::items::id))),
                 )
-                .filter(self::schema::items::done.eq(false))
-                .order((user_id.desc(), ordinal.asc()))
+                .filter(item_done.eq(false))
+                .order((vote_user_id.desc(), ordinal.asc()))
                 .select((self::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(c)
                 .unwrap_or(Vec::new())
@@ -115,7 +117,7 @@ impl Item {
 impl ItemData {
     pub async fn add(self, conn: &DbConn) -> Option<()> {
         conn.run(move |c| {
-            diesel::insert_into(self::schema::items::table)
+            diesel::insert_into(all_items)
                 .values(&self)
                 .execute(c)
                 .ok()?;
@@ -129,61 +131,61 @@ impl Vote {
     pub async fn run_election(conn: &DbConn) -> Option<Item> {
         conn.run(move |c| {
             let votes = all_votes
-                .inner_join(self::schema::items::table)
+                .inner_join(all_items)
                 .filter(item_done.eq(false))
-                .order((user_id.asc(), ordinal.asc()))
-                .select((user_id, item_id, ordinal))
+                .order((vote_user_id.asc(), ordinal.asc()))
+                .select((vote_user_id, vote_item_id, ordinal))
                 .get_results::<Vote>(c)
                 .ok()?;
 
             Vote::election_driver(&votes, &c)
-        }).await
+        })
+        .await
     }
 
     pub async fn run_second_election(conn: &DbConn, winner: Option<Item>) -> Option<Item> {
         conn.run(move |c| {
             let winner = winner.as_ref()?;
             let votes = all_votes
-                .inner_join(self::schema::items::table)
+                .inner_join(all_items)
                 .filter(item_done.eq(false))
-                .filter(item_id.ne(winner.id))
-                .order((user_id.asc(), ordinal.asc()))
-                .select((user_id, item_id, ordinal))
+                .filter(vote_item_id.ne(winner.id))
+                .order((vote_user_id.asc(), ordinal.asc()))
+                .select((vote_user_id, vote_item_id, ordinal))
                 .get_results::<Vote>(c)
                 .ok()?;
 
             Vote::election_driver(&votes, &c)
-        }).await
+        })
+        .await
     }
 
     fn election_driver(votes: &Vec<Vote>, c: &SqliteConnection) -> Option<Item> {
-            // the extra collections here are sad.
-            let votes: Vec<Vec<_>> = votes
-                .into_iter()
-                .group_by(|v| v.user_id)
-                .into_iter()
-                .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_id).collect())
-                .collect();
+        // the extra collections here are sad.
+        let votes: Vec<Vec<_>> = votes
+            .into_iter()
+            .group_by(|v| v.user_id)
+            .into_iter()
+            .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_id).collect())
+            .collect();
 
-            match rcir::run_election(&votes, rcir::MajorityMode::RemainingMajority).ok()? {
-                rcir::ElectionResult::Winner(&iid) => {
-                    all_items.find(iid).get_result::<Item>(c).ok()
-                }
-                rcir::ElectionResult::Tie(iids) => {
-                    // TODO: maybe pick the oldest one?
-                    all_items.find(*iids[0]).get_result::<Item>(c).ok()
-                }
+        match rcir::run_election(&votes, rcir::MajorityMode::RemainingMajority).ok()? {
+            rcir::ElectionResult::Winner(&iid) => all_items.find(iid).get_result::<Item>(c).ok(),
+            rcir::ElectionResult::Tie(iids) => {
+                // TODO: maybe pick the oldest one?
+                all_items.find(*iids[0]).get_result::<Item>(c).ok()
             }
+        }
     }
 
     pub async fn save_ballot(uid: i32, ballot: Ballot, conn: &DbConn) -> Option<()> {
         conn.run(move |c| {
-            diesel::delete(all_votes.filter(user_id.eq(&uid)))
+            diesel::delete(all_votes.filter(vote_user_id.eq(&uid)))
                 .execute(c)
                 .ok()?;
 
             for (i, iid) in ballot.votes.into_iter().enumerate() {
-                diesel::insert_into(self::schema::votes::table)
+                diesel::insert_into(all_votes)
                     .values(Vote {
                         user_id: uid,
                         item_id: iid,
