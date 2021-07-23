@@ -6,8 +6,8 @@ extern crate diesel;
 extern crate rocket_sync_db_pools;
 
 mod schema;
+mod markdown;
 
-use comrak::{markdown_to_html, ComrakOptions};
 use rocket::form::Form;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::outcome::IntoOutcome;
@@ -15,8 +15,10 @@ use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{Flash, Redirect};
 use rocket::serde::{json::Json, Serialize};
 use rocket_dyn_templates::Template;
-use schema::{Ballot, Item, ItemData, NewUser, Vote};
 use rocket::fs::{FileServer, relative};
+
+use schema::{Ballot, Item, ItemData, NewUser, Vote};
+use markdown::markdown_to_html;
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -107,13 +109,13 @@ async fn vote(ballot: Json<Ballot>, user: Auth, conn: DbConn) -> Status {
 
 #[post("/preview", data = "<markdown>")]
 async fn preview(markdown: &str, _user: Auth, _conn: DbConn) -> String {
-    markdown_to_html(markdown, &ComrakOptions::default())
+    markdown_to_html(markdown)
 }
 
 #[post("/new", data = "<item>")]
 async fn new_item(item: Form<ItemData>, _user: Auth, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
-    item_data.body = markdown_to_html(&item_data.body, &ComrakOptions::default());
+    item_data.body = markdown_to_html(&item_data.body);
     let res = item_data.add(&conn).await;
     match res {
         Some(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
