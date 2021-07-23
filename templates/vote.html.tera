@@ -45,12 +45,14 @@
     {% for item in items %}
     {% if item.1 is number %}
     {% if not item.0.done %}
-    <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
-        <span class="badge badge-info">drag here</span>
-        <h5 class="mb-1">{{ item.0.title }}</h5>
+    <details class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
+        <summary>
+            <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
+            <span class="badge badge-info">drag here</span>
+        </summary>
         <hr>
         <div class="mb-1">{{ item.0.body | safe }}</div>
-    </div>
+    </details>
     {% endif %}
     {% endif %}
     {% endfor %}
@@ -60,12 +62,14 @@
     {% for item in items %}
     {% if not item.1 is number %}
     {% if not item.0.done %}
-    <div class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
-        <span class="badge badge-info">drag here</span>
-        <h5 class="mb-1">{{ item.0.title }}</h5>
+    <details class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
+        <summary>
+            <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
+            <span class="badge badge-info">drag here</span>
+        </summary>
         <hr>
         <div class="mb-1">{{ item.0.body | safe }}</div>
-    </div>
+    </details>
     {% endif %}
     {% endif %}
     {% endfor %}
