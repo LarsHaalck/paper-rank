@@ -1,7 +1,7 @@
 use rocket::serde::Serialize;
 
 use crate::DbConn;
-use crate::schema::{Vote, Item, User};
+use crate::db::{Vote, Item, User};
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]

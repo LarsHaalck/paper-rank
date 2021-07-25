@@ -5,7 +5,7 @@ extern crate diesel;
 #[macro_use]
 extern crate rocket_sync_db_pools;
 
-mod schema;
+mod db;
 mod markdown;
 mod context;
 mod auth;
@@ -18,7 +18,7 @@ use rocket::serde::{json::Json};
 use rocket_dyn_templates::Template;
 use rocket::fs::{FileServer, relative};
 
-use schema::{Ballot, ItemData, NewUser, Vote, User, AdminUser};
+use db::{Ballot, ItemData, NewUser, Vote, User, AdminUser};
 use markdown::markdown_to_html;
 use context::Context;
 
@@ -51,6 +51,15 @@ async fn login(
         }
     }
 }
+
+// #[post("/admin")]
+// async fn admin(user: AdminUser, conn: DbConn) -> Status {
+//     let res = Vote::save_ballot(user.id, ballot.into_inner(), &conn).await;
+//     match res {
+//         Some(_) => Status::Ok,
+//         None => Status::NotAcceptable,
+//     }
+// }
 
 #[post("/vote", data = "<ballot>")]
 async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
