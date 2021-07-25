@@ -7,69 +7,23 @@ extern crate rocket_sync_db_pools;
 
 mod schema;
 mod markdown;
+mod context;
+mod auth;
 
 use rocket::form::Form;
 use rocket::http::{Cookie, CookieJar, Status};
-use rocket::outcome::IntoOutcome;
-use rocket::request::{self, FlashMessage, FromRequest, Request};
+use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
-use rocket::serde::{json::Json, Serialize};
+use rocket::serde::{json::Json};
 use rocket_dyn_templates::Template;
 use rocket::fs::{FileServer, relative};
 
-use schema::{Ballot, Item, ItemData, NewUser, Vote};
+use schema::{Ballot, ItemData, NewUser, Vote, User, AdminUser};
 use markdown::markdown_to_html;
+use context::Context;
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
-
-#[derive(Debug, Serialize)]
-#[serde(crate = "rocket::serde")]
-struct Context {
-    winner: Option<Item>,
-    second: Option<Item>,
-    items: Vec<(Item, Option<i32>)>,
-    flash: Option<(String, String)>,
-}
-
-impl Context {
-    pub async fn new(conn: &DbConn, flash: Option<(String, String)>) -> Context {
-        Context {
-            winner: Vote::run_election(conn).await,
-            second: None,
-            items: Vec::new(), // not used if not logged in
-            flash,
-        }
-    }
-
-    pub async fn for_user(user: Auth, conn: &DbConn, flash: Option<(String, String)>) -> Context {
-        let winner = Vote::run_election(conn).await;
-        let second = Vote::run_second_election(conn, winner.clone()).await;
-        Context {
-            winner,
-            second,
-            items: Item::for_user(user.0, conn).await,
-            flash,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Auth(i32);
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Auth {
-    type Error = std::convert::Infallible;
-
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Auth, Self::Error> {
-        request
-            .cookies()
-            .get_private("user_id")
-            .and_then(|cookie| cookie.value().parse().ok())
-            .map(Auth)
-            .or_forward(())
-    }
-}
 
 #[post("/login", data = "<input>")]
 async fn login(
@@ -99,8 +53,8 @@ async fn login(
 }
 
 #[post("/vote", data = "<ballot>")]
-async fn vote(ballot: Json<Ballot>, user: Auth, conn: DbConn) -> Status {
-    let res = Vote::save_ballot(user.0, ballot.into_inner(), &conn).await;
+async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
+    let res = Vote::save_ballot(user.id, ballot.into_inner(), &conn).await;
     match res {
         Some(_) => Status::Ok,
         None => Status::NotAcceptable,
@@ -108,12 +62,12 @@ async fn vote(ballot: Json<Ballot>, user: Auth, conn: DbConn) -> Status {
 }
 
 #[post("/preview", data = "<markdown>")]
-async fn preview(markdown: &str, _user: Auth, _conn: DbConn) -> String {
+async fn preview(markdown: &str, _user: User, _conn: DbConn) -> String {
     markdown_to_html(markdown)
 }
 
 #[post("/new", data = "<item>")]
-async fn new_item(item: Form<ItemData>, _user: Auth, conn: DbConn) -> Flash<Redirect> {
+async fn new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
     item_data.body = markdown_to_html(&item_data.body);
     let res = item_data.add(&conn).await;
@@ -124,13 +78,13 @@ async fn new_item(item: Form<ItemData>, _user: Auth, conn: DbConn) -> Flash<Redi
 }
 
 #[get("/new")]
-async fn new(flash: Option<FlashMessage<'_>>, user: Auth, conn: DbConn) -> Template {
+async fn new(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("new", Context::for_user(user, &conn, flash).await)
 }
 
 #[get("/")]
-async fn votes(flash: Option<FlashMessage<'_>>, user: Auth, conn: DbConn) -> Template {
+async fn votes(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("vote", Context::for_user(user, &conn, flash).await)
 }

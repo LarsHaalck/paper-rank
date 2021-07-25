@@ -1,7 +1,8 @@
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE
+    username TEXT NOT NULL UNIQUE,
+    is_admin BOOL NOT NULL DEFAULT false
 );
 CREATE UNIQUE INDEX uname ON users(username);
 

@@ -10,6 +10,7 @@ mod schema {
         users {
             id -> Integer,
             username -> Text,
+            is_admin -> Bool,
         }
     }
 
@@ -42,7 +43,10 @@ use self::schema::votes;
 pub struct User {
     pub id: i32,
     pub username: String,
+    pub is_admin: bool
 }
+
+pub struct AdminUser(pub User);
 
 #[derive(Serialize, Queryable, Debug, Clone)]
 pub struct Item {
@@ -61,7 +65,7 @@ pub struct Vote {
 }
 
 use self::schema::items::dsl::{done as item_done, items as all_items};
-use self::schema::users::dsl::{username as users_uname, users as all_users};
+use self::schema::users::dsl::{id as user_id, username as users_uname, users as all_users};
 use self::schema::votes::dsl::{
     item_id as vote_item_id, ordinal, user_id as vote_user_id, votes as all_votes,
 };
@@ -88,6 +92,18 @@ impl NewUser {
         conn.run(move |c| {
             all_users
                 .filter(users_uname.eq(&self.username))
+                .get_result::<User>(c)
+                .ok()
+        })
+        .await
+    }
+}
+
+impl User {
+    pub async fn from_id(id: i32, conn: &DbConn) -> Option<User> {
+        conn.run(move |c| {
+            all_users
+                .filter(user_id.eq(id))
                 .get_result::<User>(c)
                 .ok()
         })
