@@ -22,6 +22,9 @@
     <body>
         <nav class="navbar navbar-dark bg-primary">
           <a class="navbar-brand mb-0 h1" href="/">Vote for the next paper</a>
+          <a class="navbar-brand mb-0 h1" href="/user">
+          {% if username %} {{ username }} {% endif %}🐸
+          </a>
         </nav>
         <div class="container pt-3">
             {% if flash %}

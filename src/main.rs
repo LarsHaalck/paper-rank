@@ -5,22 +5,22 @@ extern crate diesel;
 #[macro_use]
 extern crate rocket_sync_db_pools;
 
+mod auth;
+mod context;
 mod db;
 mod markdown;
-mod context;
-mod auth;
 
 use rocket::form::Form;
+use rocket::fs::{relative, FileServer};
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
-use rocket::serde::{json::Json};
+use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
-use rocket::fs::{FileServer, relative};
 
-use db::{Ballot, ItemData, NewUser, Vote, User, AdminUser};
+use context::{UserContext, VoteContext};
+use db::{AdminUser, Ballot, ItemData, NewUser, User, Vote};
 use markdown::markdown_to_html;
-use context::Context;
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -33,21 +33,29 @@ async fn login(
 ) -> Result<Redirect, Flash<Redirect>> {
     let user = input.into_inner();
     if user.username.is_empty() {
-        Err(Flash::error(
-            Redirect::to(uri!(index)),
-            "Username must not be empty",
-        ))
+        Err(Flash::error(Redirect::to(uri!(user)), "Username must not be empty"))
     } else {
         let u = user.login(&conn).await;
         match u {
-            Some(x) => {
+            Ok(x) => {
                 jar.add_private(Cookie::new("user_id", x.id.to_string()));
                 Ok(Redirect::to(uri!(votes)))
             }
-            None => Err(Flash::error(
-                Redirect::to(uri!(index)),
-                "Username does not exist.",
-            )),
+            Err(e) => Err(Flash::error(Redirect::to(uri!(user)), e.to_string()))
+        }
+    }
+}
+
+#[post("/register", data = "<input>")]
+async fn register(input: Form<NewUser>, conn: DbConn) -> Flash<Redirect> {
+    let user = input.into_inner();
+    if user.username.is_empty() {
+        Flash::error(Redirect::to(uri!(user)), "Username must not be empty")
+    } else {
+        let u = user.register(&conn).await;
+        match u {
+            Ok(_) => Flash::success(Redirect::to(uri!(user)), "Registered user."),
+            Err(e) => Flash::error(Redirect::to(uri!(user)), e.to_string()),
         }
     }
 }
@@ -86,22 +94,40 @@ async fn new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redi
     }
 }
 
+// #[post("/change_password")]
+// async fn user_panel(flash: Option<FlashMessage<'_>>, _user: User, conn: DbConn) -> Template {
+//     let flash = flash.map(FlashMessage::into_inner);
+//     Template::render("user", UserContext::new(&conn, flash).await)
+// }
+
+#[get("/user")]
+async fn user_panel(flash: Option<FlashMessage<'_>>, _user: User, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render("user", UserContext::new(&conn, flash).await)
+}
+
+#[get("/user", rank = 2)]
+async fn user(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render("login", UserContext::new(&conn, flash).await)
+}
+
 #[get("/new")]
 async fn new(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("new", Context::for_user(user, &conn, flash).await)
+    Template::render("new", VoteContext::for_user(user, &conn, flash).await)
 }
 
 #[get("/")]
 async fn votes(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("vote", Context::for_user(user, &conn, flash).await)
+    Template::render("vote", VoteContext::for_user(user, &conn, flash).await)
 }
 
 #[get("/", rank = 2)]
 async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("index", Context::new(&conn, flash).await)
+    Template::render("index", VoteContext::new(&conn, flash).await)
 }
 
 #[launch]
@@ -111,7 +137,7 @@ fn rocket() -> _ {
         .attach(Template::fairing())
         .mount(
             "/",
-            routes![index, login, votes, vote, new, preview, new_item],
+            routes![index, login, votes, vote, new, preview, new_item, user, register],
         )
         .mount("/", FileServer::from(relative!("static")))
 }

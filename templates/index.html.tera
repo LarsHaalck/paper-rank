@@ -3,7 +3,7 @@
 {% if winner %}
 <div class="card mt-3">
   <div class="card-header">
-    Next paper unless you vote!
+    Next Paper unless you vote!
   </div>
   <div class="card-body">
     <h5 class="card-title">{{ winner.title }}</h5>
@@ -11,17 +11,11 @@
     <div class="card-text">{{ winner.body | safe }}</div>
   </div>
 </div>
+{% else %}
+<div class="alert alert-info mt-3" role="alert">
+    No Papers votable at the moment!
+</div>
 {% endif %}
-<form action="login" method="post" class="mt-3">
-    <div class="row">
-        <div class="col-auto">
-            <input class="form-control" type="text" placeholder="Enter your username" name="username" required autofocus />
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-    </div>
-</form>
 {% endblock %}
 {% block head %}
 {% endblock %}

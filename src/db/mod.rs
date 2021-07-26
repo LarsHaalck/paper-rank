@@ -3,20 +3,22 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::DbConn;
 
-mod user;
 mod item;
+mod user;
 mod vote;
 
-pub use user::{User, AdminUser, NewUser};
-pub use vote::{Vote, Ballot};
 pub use item::{Item, ItemData};
+pub use user::{AdminUser, NewUser, User};
+pub use vote::{Ballot, Vote};
 
 mod schema {
     table! {
         users {
             id -> Integer,
             username -> Text,
+            password -> Text,
             is_admin -> Bool,
+            is_approved -> Bool,
         }
     }
 
@@ -44,10 +46,13 @@ mod schema {
 
 use self::schema::items;
 use self::schema::votes;
+use self::schema::users;
+
 
 use self::schema::items::dsl::{done as item_done, items as all_items};
-use self::schema::users::dsl::{id as user_id, username as users_uname, users as all_users};
+use self::schema::users::dsl::{
+    id as user_id, password as user_password, username as user_username, is_approved as user_approved, users as all_users,
+};
 use self::schema::votes::dsl::{
     item_id as vote_item_id, ordinal, user_id as vote_user_id, votes as all_votes,
 };
-
