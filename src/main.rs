@@ -19,12 +19,15 @@ use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
 
 use context::{UserContext, VoteContext};
-use db::{AdminUser, Ballot, ItemData, NewUser, User, Vote};
+use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
 use markdown::markdown_to_html;
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
+///////////////////////////////////////////////////////////////////////////////
+// Post Routes
+///////////////////////////////////////////////////////////////////////////////
 #[post("/login", data = "<input>")]
 async fn login(
     jar: &CookieJar<'_>,
@@ -33,15 +36,18 @@ async fn login(
 ) -> Result<Redirect, Flash<Redirect>> {
     let user = input.into_inner();
     if user.username.is_empty() {
-        Err(Flash::error(Redirect::to(uri!(user)), "Username must not be empty"))
+        Err(Flash::error(
+            Redirect::to(uri!(user)),
+            "Username must not be empty",
+        ))
     } else {
         let u = user.login(&conn).await;
         match u {
             Ok(x) => {
                 jar.add_private(Cookie::new("user_id", x.id.to_string()));
-                Ok(Redirect::to(uri!(votes)))
+                Ok(Redirect::to(uri!(index_user)))
             }
-            Err(e) => Err(Flash::error(Redirect::to(uri!(user)), e.to_string()))
+            Err(e) => Err(Flash::error(Redirect::to(uri!(user)), e.to_string())),
         }
     }
 }
@@ -52,22 +58,26 @@ async fn register(input: Form<NewUser>, conn: DbConn) -> Flash<Redirect> {
     if user.username.is_empty() {
         Flash::error(Redirect::to(uri!(user)), "Username must not be empty")
     } else {
-        let u = user.register(&conn).await;
-        match u {
-            Ok(_) => Flash::success(Redirect::to(uri!(user)), "Registered user."),
+        let res = user.register(&conn).await;
+        match res {
+            Ok(_) => Flash::success(
+                Redirect::to(uri!(user)),
+                "Registered new user which must be approved by the admin.",
+            ),
             Err(e) => Flash::error(Redirect::to(uri!(user)), e.to_string()),
         }
     }
 }
 
-// #[post("/admin")]
-// async fn admin(user: AdminUser, conn: DbConn) -> Status {
-//     let res = Vote::save_ballot(user.id, ballot.into_inner(), &conn).await;
-//     match res {
-//         Some(_) => Status::Ok,
-//         None => Status::NotAcceptable,
-//     }
-// }
+#[post("/change_password", data = "<input>")]
+async fn change_password(input: Form<NewPassword>, user: User, conn: DbConn) -> Flash<Redirect> {
+    let new_password = input.into_inner();
+    let change = user.change_password(new_password, &conn).await;
+    match change {
+        Ok(_) => Flash::success(Redirect::to(uri!(user)), "Sucessfully changed password"),
+        Err(e) => Flash::error(Redirect::to(uri!(user)), e.to_string()),
+    }
+}
 
 #[post("/vote", data = "<ballot>")]
 async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
@@ -83,27 +93,28 @@ async fn preview(markdown: &str, _user: User, _conn: DbConn) -> String {
     markdown_to_html(markdown)
 }
 
-#[post("/new", data = "<item>")]
-async fn new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
+#[post("/new_item", data = "<item>")]
+async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
     item_data.body = markdown_to_html(&item_data.body);
     let res = item_data.add(&conn).await;
     match res {
         Some(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
-        None => Flash::error(Redirect::to(uri!(new)), "Failed to insert item into db"),
+        None => Flash::error(
+            Redirect::to(uri!(add_new_item)),
+            "Failed to insert item into db",
+        ),
     }
 }
 
-// #[post("/change_password")]
-// async fn user_panel(flash: Option<FlashMessage<'_>>, _user: User, conn: DbConn) -> Template {
-//     let flash = flash.map(FlashMessage::into_inner);
-//     Template::render("user", UserContext::new(&conn, flash).await)
-// }
+///////////////////////////////////////////////////////////////////////////////
+// GET Routes
+///////////////////////////////////////////////////////////////////////////////
 
 #[get("/user")]
-async fn user_panel(flash: Option<FlashMessage<'_>>, _user: User, conn: DbConn) -> Template {
+async fn user_user(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("user", UserContext::new(&conn, flash).await)
+    Template::render("user", UserContext::for_user(user, &conn, flash).await)
 }
 
 #[get("/user", rank = 2)]
@@ -112,14 +123,14 @@ async fn user(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
     Template::render("login", UserContext::new(&conn, flash).await)
 }
 
-#[get("/new")]
-async fn new(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+#[get("/new_item")]
+async fn new_item(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("new", VoteContext::for_user(user, &conn, flash).await)
+    Template::render("new_item", VoteContext::for_user(user, &conn, flash).await)
 }
 
 #[get("/")]
-async fn votes(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+async fn index_user(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("vote", VoteContext::for_user(user, &conn, flash).await)
 }
@@ -135,9 +146,17 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
+        .mount("/", routes![index, index_user, new_item, user, user_user])
         .mount(
             "/",
-            routes![index, login, votes, vote, new, preview, new_item, user, register],
+            routes![
+                login,
+                register,
+                change_password,
+                vote,
+                preview,
+                add_new_item
+            ],
         )
         .mount("/", FileServer::from(relative!("static")))
 }

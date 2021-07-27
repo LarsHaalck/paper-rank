@@ -1,7 +1,7 @@
 use rocket::outcome::{try_outcome, IntoOutcome};
-use rocket::request::{self, FromRequest, Outcome, Request};
+use rocket::request::{FromRequest, Outcome, Request};
 
-use crate::db::{AdminUser, User};
+use crate::db::User;
 use crate::DbConn;
 
 #[rocket::async_trait]
@@ -22,17 +22,17 @@ impl<'r> FromRequest<'r> for User {
     }
 }
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for AdminUser {
-    type Error = ();
+// #[rocket::async_trait]
+// impl<'r> FromRequest<'r> for AdminUser {
+//     type Error = ();
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<AdminUser, ()> {
-        let user = try_outcome!(request.guard::<User>().await);
-        // if user.is_admin {
-        //     Outcome::Success(AdminUser { user })
-        // } else {
-        //     Outcome::Forward(())
-        // }
-        Outcome::Forward(())
-    }
-}
+//     async fn from_request(request: &'r Request<'_>) -> request::Outcome<AdminUser, ()> {
+//         let user = try_outcome!(request.guard::<User>().await);
+//         // if user.is_admin {
+//         //     Outcome::Success(AdminUser { user })
+//         // } else {
+//         //     Outcome::Forward(())
+//         // }
+//         Outcome::Forward(())
+//     }
+// }

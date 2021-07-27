@@ -8,7 +8,7 @@ mod user;
 mod vote;
 
 pub use item::{Item, ItemData};
-pub use user::{AdminUser, NewUser, User};
+pub use user::{User, NewUser, NewPassword};
 pub use vote::{Ballot, Vote};
 
 mod schema {

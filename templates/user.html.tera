@@ -1,0 +1,41 @@
+{% extends "base" %}
+{% block content %}
+<h4>Change password:</h4>
+<form action="change_password" method="post" class="mt-3">
+    <div class="row">
+        <div class="col-auto">
+            <b>Old Password: </b>
+        </div>
+        <div class="col-auto">
+            <input class="form-control" id="old_password" type="password" placeholder="Enter your old password" name="old_password" required />
+        </div>
+        <div class="col-auto">
+            <b>New Password: </b>
+        </div>
+        <div class="col-auto">
+            <input class="form-control" id="new_password" type="password" placeholder="Enter your new password" name="new_password" required />
+            <input class="form-control" id="confirm_password" type="password" placeholder="Confirm Password" name="new_password" required />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Change Password</button>
+        </div>
+    </div>
+</form>
+<script>
+var password = document.getElementById("new_password");
+var confirm_password = document.getElementById("confirm_password");
+
+function validatePassword(){
+  if(password.value != confirm_password.value) {
+    confirm_password.setCustomValidity("Passwords Don't Match");
+  } else {
+    confirm_password.setCustomValidity('');
+  }
+}
+
+password.onchange = validatePassword;
+confirm_password.onkeyup = validatePassword;
+</script>
+{% endblock %}
+{% block head %}
+{% endblock %}

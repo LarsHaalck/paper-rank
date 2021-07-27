@@ -13,7 +13,7 @@
 </div>
 {% else %}
 <div class="alert alert-info mt-3" role="alert">
-    No Papers votable at the moment!
+    No Paper voted at the moment!
 </div>
 {% endif %}
 {% endblock %}

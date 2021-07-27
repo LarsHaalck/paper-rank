@@ -57,7 +57,7 @@
     {% endif %}
     {% endfor %}
 
-    <div class="list-group-item list-group-item-action list-group-item-dark" data-id="void">I do not want to vote for the following:</div>
+    <div class="list-group-item list-group-item-dark filtered" data-id="void">I do not want to vote for the following:</div>
 
     {% for item in items %}
     {% if not item.1 is number %}
@@ -77,7 +77,7 @@
 <form action="/new" class="mt-3">
     <button type="submit" class="btn btn-primary">Add new item...</button>
 </form>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.8.1/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
 <script>
 if (location.href.indexOf('login') !== -1) {
     location.href = location.href.replace("/login", "/");
@@ -85,7 +85,8 @@ if (location.href.indexOf('login') !== -1) {
 
 var sortable = Sortable.create(document.getElementById('ballot'), {
     handle: ".badge",
-    scroll: true,
+    filter: ".filtered",
+    animation: 150,
     onUpdate: function (evt) {
         var order = sortable.toArray();
         var votes = [];

@@ -17,6 +17,7 @@ pub struct VoteContext {
 #[serde(crate = "rocket::serde")]
 pub struct UserContext {
     flash: Option<(String, String)>,
+    username: Option<String>,
 }
 
 impl VoteContext {
@@ -44,15 +45,17 @@ impl VoteContext {
 }
 
 impl UserContext {
-    pub async fn new(conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
+    pub async fn new(_conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
         UserContext {
             flash,
+            username: None
         }
     }
 
-    // pub async fn for_user(user: User, conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
-    //     UserContext {
-    //         flash,
-    //     }
-    // }
+    pub async fn for_user(user: User, _conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
+        UserContext {
+            flash,
+            username: Some(user.username)
+        }
+    }
 }

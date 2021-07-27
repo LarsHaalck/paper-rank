@@ -6,15 +6,6 @@ use pbkdf2::{
 };
 use rand_core::OsRng;
 use std::io::{Error, ErrorKind};
-// let password = b"hunter42";
-// let salt = SaltString::generate(&mut OsRng);
-
-// // Hash password to PHC string ($pbkdf2-sha256$...)
-// let password_hash = Pbkdf2.hash_password_simple(password, salt.as_ref()).unwrap().to_string();
-
-// // Verify password against PHC string
-// let parsed_hash = PasswordHash::new(&password_hash).unwrap();
-// assert!(Pbkdf2.verify_password(password, &parsed_hash).is_ok());
 
 #[derive(Queryable, Debug)]
 struct UserDB {
@@ -31,16 +22,45 @@ pub struct User {
     pub username: String,
 }
 
-#[derive(Debug)]
-pub struct AdminUser {
-    pub user: User,
-}
+// #[derive(Debug)]
+// pub struct AdminUser {
+//     pub user: User,
+// }
 
 #[derive(FromForm, Insertable, Debug)]
 #[table_name = "users"]
 pub struct NewUser {
     pub username: String,
     pub password: String,
+}
+
+#[derive(FromForm, Debug)]
+pub struct NewPassword {
+    pub old_password: String,
+    pub new_password: String,
+}
+
+mod password {
+    use super::*;
+
+    pub fn verify(password: &String, hash: &String) -> Result<(), Error> {
+        // Verify password against PHC string
+        let parsed_hash = PasswordHash::new(hash)
+            .map_err(|_| Error::new(ErrorKind::InvalidData, "Failed reading password."))?;
+        Pbkdf2
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .map_err(|_| Error::new(ErrorKind::InvalidData, "Wrong password."))?;
+        Ok(())
+    }
+
+    pub fn generate_new_hash(password: &String) -> Result<String, Error> {
+        let salt = SaltString::generate(&mut OsRng);
+        // Hash password to PHC string ($pbkdf2-sha256$...)
+        Ok(Pbkdf2
+            .hash_password_simple(password.as_bytes(), salt.as_ref())
+            .map_err(|_| Error::new(ErrorKind::InvalidInput, "Failed hashing password."))?
+            .to_string())
+    }
 }
 
 impl NewUser {
@@ -50,14 +70,9 @@ impl NewUser {
                 .filter(user_username.eq(&self.username))
                 .filter(user_approved)
                 .get_result::<UserDB>(c)
-                .map_err(|_| Error::new(ErrorKind::NotFound, "User not found or not approved"))?;
+                .map_err(|_| Error::new(ErrorKind::NotFound, "User not found or not approved."))?;
 
-            // Verify password against PHC string
-            let parsed_hash = PasswordHash::new(&user.password)
-                .map_err(|_| Error::new(ErrorKind::InvalidData, "Failed reading password"))?;
-            Pbkdf2
-                .verify_password(&self.password.as_bytes(), &parsed_hash)
-                .map_err(|_| Error::new(ErrorKind::InvalidData, "Passwords do not match"))?;
+            password::verify(&self.password, &user.password)?;
             Ok(User {
                 id: user.id,
                 username: user.username,
@@ -76,19 +91,11 @@ impl NewUser {
                 return Err(Error::new(ErrorKind::AlreadyExists, "User already exists."));
             }
 
-            let salt = SaltString::generate(&mut OsRng);
-            // Hash password to PHC string ($pbkdf2-sha256$...)
-            let password_hash = Pbkdf2
-                .hash_password_simple(&self.password.as_bytes(), salt.as_ref())
-                .map_err(|_| Error::new(ErrorKind::InvalidInput, "Failed hashing password."))?
-                .to_string();
-
+            let password_hash = password::generate_new_hash(&self.password)?;
             let new_user = NewUser {
                 username: self.username,
                 password: password_hash,
             };
-
-            println!("{:?}", new_user);
 
             diesel::insert_into(all_users)
                 .values(&new_user)
@@ -114,5 +121,28 @@ impl User {
             id: user.id,
             username: user.username,
         })
+    }
+
+    pub async fn change_password(
+        self,
+        new_password: NewPassword,
+        conn: &DbConn,
+    ) -> Result<(), Error> {
+        conn.run(move |c| {
+            let user = all_users
+                .filter(user_id.eq(self.id))
+                .get_result::<UserDB>(c)
+                .map_err(|_| Error::new(ErrorKind::NotFound, "User not found in db."))?;
+
+            password::verify(&new_password.old_password, &user.password)?;
+            let hash = password::generate_new_hash(&new_password.new_password)?;
+            diesel::update(all_users.filter(user_id.eq(self.id)))
+                .set(user_password.eq(hash))
+                .execute(c)
+                .map_err(|_| Error::new(ErrorKind::Other, "Faile to write into db."))?;
+
+            Ok(())
+        })
+        .await
     }
 }
