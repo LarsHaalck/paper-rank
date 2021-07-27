@@ -19,7 +19,7 @@
 <form action="register" method="post" class="mt-3">
     <div class="row">
         <div class="col-auto">
-            <input class="form-control" type="text" placeholder="Enter your username" name="username" required autofocus />
+            <input class="form-control" type="text" placeholder="Enter a unique username" name="username" required autofocus />
         </div>
         <div class="col-auto">
             <input class="form-control" id="password" type="password" placeholder="Enter your password" name="password" required />
