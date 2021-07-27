@@ -90,14 +90,15 @@ async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
 }
 
 #[post("/preview", data = "<markdown>")]
-async fn preview(markdown: &str, _user: User, _conn: DbConn) -> String {
+async fn preview(markdown: &str, _user: User, _conn: DbConn) -> Result<String, std::io::Error> {
     markdown_to_html(markdown)
 }
 
 #[post("/new_item", data = "<item>")]
 async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
-    item_data.body = markdown_to_html(&item_data.body);
+    let html = markdown_to_html(&item_data.body)?;
+    item_data.body = html;
     let res = item_data.add(&conn).await;
     match res {
         Ok(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),

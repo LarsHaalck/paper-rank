@@ -1,11 +1,9 @@
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{format_html, parse_document, Arena, ComrakOptions};
 
-pub fn markdown_to_html(md: &str) -> String {
-    return markdown_to_html_filtered(md);
-}
+use std::io::{Error, ErrorKind};
 
-fn markdown_to_html_filtered(md: &str) -> String
+pub fn markdown_to_html(md: &str) -> Result<String, Error>
 {
     let arena = Arena::new();
     let root = parse_document(&arena, md, &ComrakOptions::default());
@@ -31,6 +29,9 @@ fn markdown_to_html_filtered(md: &str) -> String
     filter_images(root);
 
     let mut html = vec![];
-    format_html(root, &ComrakOptions::default(), &mut html).unwrap();
-    return String::from_utf8(html).unwrap();
+    format_html(root, &ComrakOptions::default(), &mut html)
+        .map_err(|_| Error::new(ErrorKind::InvalidInput, "Error rendering markdown."))?;
+
+    String::from_utf8(html)
+        .map_err(|_| Error::new(ErrorKind::InvalidInput, "Error rendering markdown."))?
 }
