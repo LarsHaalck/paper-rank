@@ -11,14 +11,15 @@ mod db;
 mod markdown;
 
 use rocket::form::Form;
-use rocket::fs::{relative, FileServer};
+use rocket::fs::FileServer;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
+use std::path::Path;
 
-use context::{UserContext, HistoryContext, VoteContext};
+use context::{HistoryContext, UserContext, VoteContext};
 use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
 use markdown::markdown_to_html;
 
@@ -151,7 +152,10 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .mount("/", routes![index, index_user, new_item, user, user_user, history])
+        .mount(
+            "/",
+            routes![index, index_user, new_item, user, user_user, history],
+        )
         .mount(
             "/",
             routes![
@@ -163,5 +167,5 @@ fn rocket() -> _ {
                 add_new_item
             ],
         )
-        .mount("/", FileServer::from(relative!("static")))
+        .mount("/", FileServer::from(Path::new("static")))
 }
