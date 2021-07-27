@@ -36,7 +36,7 @@
     <div class="col">
     <h4>Markdown:</h4>
     <hr>
-    <form action="new" method="post" class="mt-3" id="new_form"></form>
+    <form action="new_item" method="post" class="mt-3" id="new_form"></form>
     <textarea id="markdown" class="p-2", form="new_form" name="body" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required>
 **Topic:**
 

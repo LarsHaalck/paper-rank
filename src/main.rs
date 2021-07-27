@@ -18,7 +18,7 @@ use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
 
-use context::{UserContext, VoteContext};
+use context::{UserContext, HistoryContext, VoteContext};
 use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
 use markdown::markdown_to_html;
 
@@ -107,11 +107,19 @@ async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<
 ///////////////////////////////////////////////////////////////////////////////
 // GET Routes
 ///////////////////////////////////////////////////////////////////////////////
+#[get("/history")]
+async fn history(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render(
+        "history",
+        HistoryContext::for_user(user, &conn, flash).await,
+    )
+}
 
 #[get("/user")]
-async fn user_user(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+async fn user_user(flash: Option<FlashMessage<'_>>, user: User, _conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("user", UserContext::for_user(user, &conn, flash).await)
+    Template::render("user", UserContext::for_user(user, flash).await)
 }
 
 #[get("/user", rank = 2)]
@@ -143,7 +151,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
-        .mount("/", routes![index, index_user, new_item, user, user_user])
+        .mount("/", routes![index, index_user, new_item, user, user_user, history])
         .mount(
             "/",
             routes![

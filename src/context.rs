@@ -5,19 +5,31 @@ use crate::DbConn;
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct VoteContext {
-    winner: Option<Item>,
-    second: Option<Item>,
-    items: Vec<(Item, Option<i32>)>,
+struct Context {
     flash: Option<(String, String)>,
     username: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
+pub struct VoteContext {
+    winner: Option<Item>,
+    second: Option<Item>,
+    items: Vec<(Item, Option<i32>)>,
+    context: Context,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct HistoryContext {
+    items: Vec<Item>,
+    context: Context,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
 pub struct UserContext {
-    flash: Option<(String, String)>,
-    username: Option<String>,
+    context: Context,
 }
 
 impl VoteContext {
@@ -25,21 +37,29 @@ impl VoteContext {
         VoteContext {
             winner: Vote::run_election(conn).await,
             second: None,
-            items: Vec::new(), // not used if not logged in
-            flash,
-            username: None
+            items: Vec::new(),
+            context: Context {
+                flash,
+                username: None,
+            },
         }
     }
 
-    pub async fn for_user(user: User, conn: &DbConn, flash: Option<(String, String)>) -> VoteContext {
+    pub async fn for_user(
+        user: User,
+        conn: &DbConn,
+        flash: Option<(String, String)>,
+    ) -> VoteContext {
         let winner = Vote::run_election(conn).await;
         let second = Vote::run_second_election(conn, winner.clone()).await;
         VoteContext {
             winner,
             second,
             items: Item::for_user(user.id, conn).await,
-            flash,
-            username: Some(user.username)
+            context: Context {
+                flash,
+                username: Some(user.username),
+            },
         }
     }
 }
@@ -47,15 +67,35 @@ impl VoteContext {
 impl UserContext {
     pub async fn new(_conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
         UserContext {
-            flash,
-            username: None
+            context: Context {
+                flash,
+                username: None,
+            },
         }
     }
 
-    pub async fn for_user(user: User, _conn: &DbConn, flash: Option<(String, String)>) -> UserContext {
+    pub async fn for_user(user: User, flash: Option<(String, String)>) -> UserContext {
         UserContext {
-            flash,
-            username: Some(user.username)
+            context: Context {
+                flash,
+                username: Some(user.username),
+            },
+        }
+    }
+}
+
+impl HistoryContext {
+    pub async fn for_user(
+        user: User,
+        conn: &DbConn,
+        flash: Option<(String, String)>,
+    ) -> HistoryContext {
+        HistoryContext {
+            items: Item::get_history(conn).await,
+            context: Context {
+                flash,
+                username: Some(user.username),
+            },
         }
     }
 }

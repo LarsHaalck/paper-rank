@@ -1,0 +1,20 @@
+{% extends "base" %}
+{% block content %}
+{% if items | length > 0 %}
+<h4>History:</h4>
+{% else %}
+<div class="alert alert-info mt-3" role="alert">
+    No Paper in the history
+</div>
+{% endif %}
+{% for item in items %}
+<details class="card">
+    <summary class="card-body">
+        <h5 class="card-title d-inline">{{ item.title }}</h5>
+        <span class="float-right">{{ item.discussed_on }}</span>
+    </summary>
+    <hr>
+    <div class="card-text pl-4">{{ item.body | safe }}</div>
+</details>
+{% endfor %}
+{% endblock %}
