@@ -74,9 +74,6 @@
     {% endif %}
     {% endfor %}
 </div>
-<form action="/new_item" class="mt-3">
-    <button type="submit" class="btn btn-primary">Add new item...</button>
-</form>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
 <script>
 if (location.href.indexOf('login') !== -1) {
