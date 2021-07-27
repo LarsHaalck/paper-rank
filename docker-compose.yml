@@ -1,0 +1,7 @@
+version: '3'
+services:
+  voters:
+    image: larshaalck/voters:latest
+    restart: unless-stopped
+    volumes:
+      - ./db:/opt/voters/db
