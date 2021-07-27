@@ -35,13 +35,13 @@ impl Item {
 }
 
 impl ItemData {
-    pub async fn add(self, conn: &DbConn) -> Option<()> {
+    pub async fn add(self, conn: &DbConn) -> Result<(), Error> {
         conn.run(move |c| {
             diesel::insert_into(all_items)
                 .values(&self)
                 .execute(c)
-                .ok()?;
-            Some(())
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
+            Ok(())
         })
         .await
     }

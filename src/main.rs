@@ -83,8 +83,8 @@ async fn change_password(input: Form<NewPassword>, user: User, conn: DbConn) -> 
 async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
     let res = Vote::save_ballot(user.id, ballot.into_inner(), &conn).await;
     match res {
-        Some(_) => Status::Ok,
-        None => Status::NotAcceptable,
+        Ok(_) => Status::Ok,
+        Err(_) => Status::NotAcceptable,
     }
 }
 
@@ -99,11 +99,8 @@ async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<
     item_data.body = markdown_to_html(&item_data.body);
     let res = item_data.add(&conn).await;
     match res {
-        Some(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
-        None => Flash::error(
-            Redirect::to(uri!(add_new_item)),
-            "Failed to insert item into db",
-        ),
+        Ok(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
+        Err(e) => Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
     }
 }
 

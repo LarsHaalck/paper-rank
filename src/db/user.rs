@@ -5,7 +5,6 @@ use pbkdf2::{
     Pbkdf2,
 };
 use rand_core::OsRng;
-use std::io::{Error, ErrorKind};
 
 #[derive(Queryable, Debug)]
 struct UserDB {

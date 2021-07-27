@@ -1,5 +1,6 @@
 use diesel::{self, prelude::*};
 use rocket::serde::{Deserialize, Serialize};
+use std::io::{Error, ErrorKind};
 
 use crate::DbConn;
 
@@ -8,7 +9,7 @@ mod user;
 mod vote;
 
 pub use item::{Item, ItemData};
-pub use user::{User, NewUser, NewPassword};
+pub use user::{NewPassword, NewUser, User};
 pub use vote::{Ballot, Vote};
 
 mod schema {
@@ -45,13 +46,13 @@ mod schema {
 }
 
 use self::schema::items;
-use self::schema::votes;
 use self::schema::users;
-
+use self::schema::votes;
 
 use self::schema::items::dsl::{done as item_done, items as all_items};
 use self::schema::users::dsl::{
-    id as user_id, password as user_password, username as user_username, is_approved as user_approved, users as all_users,
+    id as user_id, is_approved as user_approved, password as user_password,
+    username as user_username, users as all_users,
 };
 use self::schema::votes::dsl::{
     item_id as vote_item_id, ordinal, user_id as vote_user_id, votes as all_votes,
