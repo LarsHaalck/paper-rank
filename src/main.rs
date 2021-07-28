@@ -97,7 +97,11 @@ async fn preview(markdown: &str, _user: User, _conn: DbConn) -> Result<String, s
 #[post("/new_item", data = "<item>")]
 async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
-    let html = markdown_to_html(&item_data.body)?;
+    let html = match markdown_to_html(&item_data.body) {
+        Ok(html) => html,
+        Err(e) => return Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
+    };
+
     item_data.body = html;
     let res = item_data.add(&conn).await;
     match res {

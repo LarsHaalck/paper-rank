@@ -1,6 +1,6 @@
 use super::*;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 
 #[derive(Serialize, Queryable, Debug, Clone)]
 pub struct Item {
@@ -31,6 +31,25 @@ impl Item {
                 .select((self::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(c)
                 .unwrap_or(Vec::new())
+        })
+        .await
+    }
+
+    pub async fn get_decided(conn: &DbConn) -> Option<Item> {
+        conn.run(move |c| {
+            let item = all_items
+                .filter(discussed_on.is_not_null())
+                .order(discussed_on.desc())
+                .limit(1)
+                .get_result::<Item>(c)
+                .ok()?;
+
+            let item_date = item.discussed_on?;
+            let today: NaiveDate = Utc::today().naive_utc();
+            if today <= item_date {
+                return Some(item)
+            }
+            return None
         })
         .await
     }

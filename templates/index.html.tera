@@ -1,9 +1,21 @@
 {% extends "base" %}
 {% block content %}
+{% if next %}
+<div class="card mt-3 border-warning">
+  <div class="card-header bg-warning">
+    Next decided paper for {{ next.discussed_on }}:
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">{{ next.title }}</h5>
+    <hr>
+    <div class="card-text">{{ next.body | safe }}</div>
+  </div>
+</div>
+{% endif %}
 {% if winner %}
-<div class="card mt-3">
-  <div class="card-header">
-    Next Paper unless you vote!
+<div class="card mt-3 border-info">
+  <div class="card-header bg-info text-white">
+    Preliminary winner of the current election:
   </div>
   <div class="card-body">
     <h5 class="card-title">{{ winner.title }}</h5>
@@ -11,7 +23,8 @@
     <div class="card-text">{{ winner.body | safe }}</div>
   </div>
 </div>
-{% else %}
+{% endif %}
+{% if not next and not winner %}
 <div class="alert alert-info mt-3" role="alert">
     No Paper voted at the moment!
 </div>

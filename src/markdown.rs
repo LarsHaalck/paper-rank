@@ -3,8 +3,7 @@ use comrak::{format_html, parse_document, Arena, ComrakOptions};
 
 use std::io::{Error, ErrorKind};
 
-pub fn markdown_to_html(md: &str) -> Result<String, Error>
-{
+pub fn markdown_to_html(md: &str) -> Result<String, Error> {
     let arena = Arena::new();
     let root = parse_document(&arena, md, &ComrakOptions::default());
 
@@ -33,5 +32,5 @@ pub fn markdown_to_html(md: &str) -> Result<String, Error>
         .map_err(|_| Error::new(ErrorKind::InvalidInput, "Error rendering markdown."))?;
 
     String::from_utf8(html)
-        .map_err(|_| Error::new(ErrorKind::InvalidInput, "Error rendering markdown."))?
+        .map_err(|_| Error::new(ErrorKind::InvalidInput, "Error rendering markdown."))
 }
