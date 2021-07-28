@@ -6,5 +6,7 @@ services:
     volumes:
       - ./db:/opt/voters/db
       - ./Rocket.toml:/opt/voters/Rocket.toml
+    env_file:
+    - .env
     ports:
       - "8000:8000"
