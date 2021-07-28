@@ -17,7 +17,7 @@ use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
-use std::path::Path;
+use rocket::figment::value::magic::RelativePathBuf;
 
 use context::{HistoryContext, UserContext, VoteContext};
 use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
@@ -154,7 +154,7 @@ async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
+    let rocket = rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
         .mount(
@@ -171,6 +171,10 @@ fn rocket() -> _ {
                 preview,
                 add_new_item
             ],
-        )
-        .mount("/", FileServer::from(Path::new("static")))
+        );
+
+    let static_dir = rocket.figment()
+            .extract_inner::<RelativePathBuf>("static_dir")
+            .map(|path| path.relative()).unwrap();
+    rocket.mount("/", FileServer::from(static_dir))
 }
