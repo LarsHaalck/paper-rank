@@ -112,6 +112,7 @@ impl User {
             .run(move |c| {
                 all_users
                     .filter(user_id.eq(id))
+                    .filter(user_approved)
                     .get_result::<UserDB>(c)
                     .ok()
             })
