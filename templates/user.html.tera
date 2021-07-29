@@ -21,6 +21,10 @@
         </div>
     </div>
 </form>
+<hr>
+<form action="logout" method="post" class="mt-3">
+    <button type="submit" class="btn btn-primary">Logout</button>
+</form>
 <script>
 var password = document.getElementById("new_password");
 var confirm_password = document.getElementById("confirm_password");

@@ -10,6 +10,7 @@ mod context;
 mod db;
 mod markdown;
 
+use rocket::figment::value::magic::RelativePathBuf;
 use rocket::form::Form;
 use rocket::fs::FileServer;
 use rocket::http::{Cookie, CookieJar, Status};
@@ -17,7 +18,6 @@ use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
-use rocket::figment::value::magic::RelativePathBuf;
 
 use context::{HistoryContext, UserContext, VoteContext};
 use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
@@ -51,6 +51,12 @@ async fn login(
             Err(e) => Err(Flash::error(Redirect::to(uri!(user)), e.to_string())),
         }
     }
+}
+
+#[post("/logout")]
+fn logout(jar: &CookieJar<'_>) -> Flash<Redirect> {
+    jar.remove_private(Cookie::named("user_id"));
+    Flash::success(Redirect::to(uri!(user)), "Successfully logged out.")
 }
 
 #[post("/register", data = "<input>")]
@@ -165,6 +171,7 @@ fn rocket() -> _ {
             "/",
             routes![
                 login,
+                logout,
                 register,
                 change_password,
                 vote,
@@ -173,8 +180,10 @@ fn rocket() -> _ {
             ],
         );
 
-    let static_dir = rocket.figment()
-            .extract_inner::<RelativePathBuf>("static_dir")
-            .map(|path| path.relative()).unwrap();
+    let static_dir = rocket
+        .figment()
+        .extract_inner::<RelativePathBuf>("static_dir")
+        .map(|path| path.relative())
+        .unwrap();
     rocket.mount("/", FileServer::from(static_dir))
 }
