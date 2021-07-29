@@ -22,8 +22,8 @@ CREATE TABLE votes (
     item_id INTEGER NOT NULL,
     ordinal INTEGER NOT NULL,
 
-    FOREIGN KEY(user_id) REFERENCES users(id)
-    FOREIGN KEY(item_id) REFERENCES items(id)
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX no_dup_votes ON votes(user_id, item_id);
 CREATE INDEX ballot ON votes(user_id ASC, ordinal ASC);
