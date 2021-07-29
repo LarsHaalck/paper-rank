@@ -3,6 +3,9 @@ use rocket::serde::Serialize;
 use crate::db::{Item, User, Vote};
 use crate::DbConn;
 
+use std::collections::HashMap;
+pub type Empty = HashMap<i32, i32>;
+
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
 struct Context {

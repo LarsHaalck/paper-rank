@@ -1,0 +1,11 @@
+{% extends "base" %}
+{% block content %}
+<div class="alert alert-danger" role="alert">
+  404 - This page does not exists or you don't the required permissions.
+</div>
+<div class="alert alert-light fixed-bottom" role="alert">
+  It's just a prank, bro!
+</div>
+{% endblock %}
+{% block head %}
+{% endblock %}

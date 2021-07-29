@@ -17,9 +17,10 @@ use rocket::http::{Cookie, CookieJar, Status};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
+use rocket::Request;
 use rocket_dyn_templates::Template;
 
-use context::{HistoryContext, UserContext, VoteContext};
+use context::{Empty, HistoryContext, UserContext, VoteContext};
 use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
 use markdown::markdown_to_html;
 
@@ -158,11 +159,17 @@ async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
     Template::render("index", VoteContext::new(&conn, flash).await)
 }
 
+#[catch(404)]
+fn not_found(_req: &Request) -> Template {
+    Template::render("404", Empty::new())
+}
+
 #[launch]
 fn rocket() -> _ {
     let rocket = rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
+        .register("/", catchers![not_found])
         .mount(
             "/",
             routes![index, index_user, new_item, user, user_user, history],
