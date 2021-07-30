@@ -35,10 +35,10 @@ function validatePassword(){
   } else {
     confirm_password.setCustomValidity('');
   }
+  confirm_password.reportValidity();
 }
 
-password.onchange = validatePassword;
-confirm_password.onkeyup = validatePassword;
+confirm_password.onchange = validatePassword;
 </script>
 {% endblock %}
 {% block head %}
