@@ -45,13 +45,6 @@
   Candidates under the gray bar are ignored.
 </div>
 <style>
-.list-group-item .badge {
-    cursor: grab;
-    float: right;
-}
-.list-group-item.sortable-chosen .badge {
-    cursor: grabbing;
-}
 .list-group-item-dark { font-weight: bold; }
 .list-group-item-dark ~ div {
     opacity: 0.5;
@@ -62,9 +55,8 @@
     {% if item.1 is number %}
     {% if not item.0.done %}
     <details class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
-        <summary>
+        <summary class"dragger">
             <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
-            <span class="badge badge-info">drag here</span>
         </summary>
         <hr>
         <div class="mb-1">{{ item.0.body | safe }}</div>
@@ -79,9 +71,8 @@
     {% if not item.1 is number %}
     {% if not item.0.done %}
     <details class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
-        <summary>
+        <summary class="dragger">
             <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
-            <span class="badge badge-info">drag here</span>
         </summary>
         <hr>
         <div class="mb-1">{{ item.0.body | safe }}</div>
@@ -97,7 +88,7 @@ if (location.href.indexOf('login') !== -1) {
 }
 
 var sortable = Sortable.create(document.getElementById('ballot'), {
-    handle: ".badge",
+    handle: ".dragger",
     filter: ".filtered",
     animation: 150,
     onUpdate: function (evt) {
