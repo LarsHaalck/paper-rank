@@ -1,13 +1,7 @@
 #[macro_use]
 extern crate rocket;
-#[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate rocket_sync_db_pools;
 
-mod auth;
 mod context;
-mod db;
 mod markdown;
 
 use rocket::figment::value::magic::RelativePathBuf;
@@ -21,11 +15,11 @@ use rocket::Request;
 use rocket_dyn_templates::Template;
 
 use context::{Empty, HistoryContext, UserContext, VoteContext};
-use db::{Ballot, ItemData, NewPassword, NewUser, User, Vote};
+use prank::item::{Item, ItemData};
+use prank::vote::{Ballot, Vote};
+use prank::user::{User, NewUser, NewPassword};
+use prank::DbConn;
 use markdown::markdown_to_html;
-
-#[database("sqlite_database")]
-pub struct DbConn(diesel::SqliteConnection);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Post Routes

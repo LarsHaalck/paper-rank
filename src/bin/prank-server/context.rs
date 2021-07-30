@@ -1,7 +1,6 @@
 use rocket::serde::Serialize;
 
-use crate::db::{Item, User, Vote};
-use crate::DbConn;
+use crate::{Item, User, Vote, DbConn};
 
 use std::collections::HashMap;
 pub type Empty = HashMap<i32, i32>;

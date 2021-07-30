@@ -2,15 +2,13 @@ use diesel::{self, prelude::*};
 use rocket::serde::{Deserialize, Serialize};
 use std::io::{Error, ErrorKind};
 
-use crate::DbConn;
+pub mod item;
+pub mod user;
+pub mod vote;
 
-mod item;
-mod user;
-mod vote;
+#[database("sqlite_database")]
+pub struct DbConn(diesel::SqliteConnection);
 
-pub use item::{Item, ItemData};
-pub use user::{NewPassword, NewUser, User};
-pub use vote::{Ballot, Vote};
 
 mod schema {
     table! {

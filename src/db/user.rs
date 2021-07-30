@@ -1,5 +1,8 @@
 use super::*;
 
+use rocket::outcome::{try_outcome, IntoOutcome};
+use rocket::request::{FromRequest, Outcome, Request};
+
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Pbkdf2,
@@ -144,5 +147,23 @@ impl User {
             Ok(())
         })
         .await
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for User {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<User, ()> {
+        let conn = try_outcome!(request.guard::<DbConn>().await);
+        let r = request
+            .cookies()
+            .get_private("user_id")
+            .and_then(|cookie| cookie.value().parse().ok())
+            .or_forward(());
+
+        let r = try_outcome!(r);
+        let user = User::from_id(r, &conn).await;
+        user.or_forward(())
     }
 }
