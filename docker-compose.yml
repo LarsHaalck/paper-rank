@@ -4,8 +4,8 @@ services:
     image: larshaalck/paper-rank:latest
     restart: unless-stopped
     volumes:
-      - ./db:/opt/voters/db
-      - ./Rocket.toml:/opt/voters/Rocket.toml
+      - ./db:/opt/prank/db
+      - ./Rocket.toml:/opt/prank/Rocket.toml
     env_file:
     - .env
     ports:
