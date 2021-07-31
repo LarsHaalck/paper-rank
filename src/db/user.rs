@@ -22,6 +22,7 @@ struct UserDB {
 pub struct User {
     pub id: i32,
     pub username: String,
+    pub is_approved: bool,
 }
 
 // #[derive(Debug)]
@@ -78,6 +79,7 @@ impl NewUser {
             Ok(User {
                 id: user.id,
                 username: user.username,
+                is_approved: user.is_approved
             })
         })
         .await
@@ -123,6 +125,7 @@ impl User {
         Some(User {
             id: user.id,
             username: user.username,
+            is_approved: user.is_approved
         })
     }
 
@@ -148,6 +151,44 @@ impl User {
         })
         .await
     }
+
+    pub async fn show(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
+        conn.run(move |c| {
+            let users: QueryResult<Vec<UserDB>>;
+            if ids.len() > 0 {
+                users = all_users
+                    .filter(user_id.eq_any(ids))
+                    .get_results::<UserDB>(c);
+            } else {
+                users = all_users
+                    .get_results::<UserDB>(c);
+            }
+
+            let users = users
+                        .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
+                        .into_iter()
+                        .map(|u| User{id: u.id, username: u.username, is_approved: u.is_approved})
+                        .collect();
+            Ok(users)
+        })
+        .await
+    }
+
+
+    // pub async fn approve(
+    //     ids: Vec<u32>,
+    //     conn: &DbConn,
+    // ) -> Result<(), Error> {
+    //     conn.run(move |c| {
+    //         let user = all_users
+    //             .filter(user_id.eq_any(ids))
+    //             .get_result::<UserDB>(c)
+    //             .map_err(|_| Error::new(ErrorKind::NotFound, "User not found in db."))?;
+
+    //         Ok(())
+    //     })
+    //     .await
+    // }
 }
 
 #[rocket::async_trait]
