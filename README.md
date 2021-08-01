@@ -1,6 +1,6 @@
-## Paperlection
+## Paper-Rank (prank)
 
-Paperlection is a simple tool written in Rust to organize topics of recurrent meetings with
+Paper-Rank is a simple tool written in Rust to organize topics of recurrent meetings with
 ongoing elections. It is designed to decide on papers for a recurring meeting
 discussing current research topics but is not specific to this particular use
 case and should be easy to adopt to other applications.
