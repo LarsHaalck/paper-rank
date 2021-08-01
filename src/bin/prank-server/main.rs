@@ -15,11 +15,11 @@ use rocket::Request;
 use rocket_dyn_templates::Template;
 
 use context::{Empty, HistoryContext, UserContext, VoteContext};
-use prank::item::{Item, ItemData};
-use prank::vote::{Ballot, Vote};
-use prank::user::{User, NewUser, NewPassword};
-use prank::DbConn;
 use markdown::markdown_to_html;
+use prank::item::{Item, ItemData};
+use prank::user::{NewPassword, NewUser, User};
+use prank::vote::{Ballot, Vote};
+use prank::DbConn;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Post Routes

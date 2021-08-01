@@ -19,7 +19,7 @@ enum UsersSubcommand {
     Show(Options),
     Delete {
         #[structopt(required = true)]
-        ids: Vec<i32>
+        ids: Vec<i32>,
     },
 }
 

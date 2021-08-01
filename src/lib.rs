@@ -8,6 +8,6 @@ extern crate rocket;
 mod db;
 
 pub use db::item;
-pub use db::vote;
 pub use db::user;
+pub use db::vote;
 pub use db::DbConn;

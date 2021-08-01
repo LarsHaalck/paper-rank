@@ -47,9 +47,9 @@ impl Item {
             let item_date = item.discussed_on?;
             let today: NaiveDate = Utc::today().naive_utc();
             if today <= item_date {
-                return Some(item)
+                return Some(item);
             }
-            return None
+            return None;
         })
         .await
     }
