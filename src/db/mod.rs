@@ -9,19 +9,6 @@ pub mod vote;
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
-// use crate::rocket_sync_db_pools::Poolable;
-// use rocket::{Rocket, Build};
-// impl DbConn {
-//     pub fn establish(rocket: &Rocket<Build>) -> DbConn {
-//         let manager = diesel::SqliteConnection::pool("sqlite_database", rocket).unwrap();
-//         let conn = manager.get().unwrap();
-//         // let conn = conn.new();
-//         DbConn(conn)
-
-//     }
-// }
-
-
 mod schema {
     table! {
         users {

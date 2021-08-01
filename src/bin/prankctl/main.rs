@@ -3,6 +3,7 @@ use structopt::StructOpt;
 use prank::user::User;
 use prank::DbConn;
 use futures::executor::block_on;
+use rocket::fairing::Fairing;
 use std::io::Error;
 
 #[derive(StructOpt, Debug)]
@@ -50,20 +51,17 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
     Ok(())
 }
 
-async fn handle_command(args: PrankCtl) -> Result<(), Error> {
-    // let fairing = DbConn::fairing();
-    // let rocket = rocket::build()
-    //     .attach(fairing);
-    // fairing.on_ignite(&rocket).await;
-    // let conn = DbConn::get_one(&rocket).await.expect("Unable to establish db connection");
-    // return match args {
-    //     PrankCtl::Users(c) => handle_users_command(c, &conn).await,
-    //     PrankCtl::Items(c) => handle_items_command(c, &conn).await
-    // }
-    
+async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<(), Error> {
+    return match args {
+        PrankCtl::Users(c) => handle_users_command(c, conn).await,
+        PrankCtl::Items(c) => handle_items_command(c, conn).await
+    }
 }
 
-fn main() {
+#[rocket::main]
+async fn main() {
     let args = PrankCtl::from_args();
-    block_on(handle_command(args));
+    let rocket = DbConn::fairing().on_ignite(rocket::build()).await.unwrap();
+    let conn = DbConn::get_one(&rocket).await.expect("Unable to establish db connection");
+    handle_command(args, &conn).await.unwrap();
 }
