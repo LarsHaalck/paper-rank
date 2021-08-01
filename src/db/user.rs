@@ -79,7 +79,7 @@ impl NewUser {
             Ok(User {
                 id: user.id,
                 username: user.username,
-                is_approved: user.is_approved
+                is_approved: user.is_approved,
             })
         })
         .await
@@ -125,7 +125,7 @@ impl User {
         Some(User {
             id: user.id,
             username: user.username,
-            is_approved: user.is_approved
+            is_approved: user.is_approved,
         })
     }
 
@@ -160,35 +160,51 @@ impl User {
                     .filter(user_id.eq_any(ids))
                     .get_results::<UserDB>(c);
             } else {
-                users = all_users
-                    .get_results::<UserDB>(c);
+                users = all_users.get_results::<UserDB>(c);
             }
 
             let users = users
-                        .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
-                        .into_iter()
-                        .map(|u| User{id: u.id, username: u.username, is_approved: u.is_approved})
-                        .collect();
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
+                .into_iter()
+                .map(|u| User {
+                    id: u.id,
+                    username: u.username,
+                    is_approved: u.is_approved,
+                })
+                .collect();
             Ok(users)
         })
         .await
     }
 
+    pub async fn set_approve(ids: Vec<i32>, value: bool, conn: &DbConn) -> Result<usize, Error> {
+        conn.run(move |c| {
+            let rows: QueryResult<usize>;
+            if ids.len() > 0 {
+                rows = diesel::update(all_users.filter(user_id.eq_any(ids)))
+                    .set(user_approved.eq(value))
+                    .execute(c);
+            } else {
+                rows = diesel::update(all_users)
+                    .set(user_approved.eq(value))
+                    .execute(c);
+            }
+            let rows =
+                rows.map_err(|_| Error::new(ErrorKind::Other, "Failed to approve users in db."))?;
+            Ok(rows)
+        })
+        .await
+    }
 
-    // pub async fn approve(
-    //     ids: Vec<u32>,
-    //     conn: &DbConn,
-    // ) -> Result<(), Error> {
-    //     conn.run(move |c| {
-    //         let user = all_users
-    //             .filter(user_id.eq_any(ids))
-    //             .get_result::<UserDB>(c)
-    //             .map_err(|_| Error::new(ErrorKind::NotFound, "User not found in db."))?;
-
-    //         Ok(())
-    //     })
-    //     .await
-    // }
+    pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize, Error> {
+        conn.run(move |c| {
+            let rows = diesel::delete(all_users.filter(user_id.eq_any(ids)))
+                .execute(c)
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to approve users in db."))?;
+            Ok(rows)
+        })
+        .await
+    }
 }
 
 #[rocket::async_trait]
