@@ -12,4 +12,4 @@ COPY templates ./templates
 RUN apt update && apt install -y libsqlite3-0 && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/prank /usr/local/bin/prank
 EXPOSE 8000
-CMD ["prank"]
+CMD ["prank-server"]
