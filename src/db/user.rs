@@ -182,11 +182,13 @@ impl User {
         conn.run(move |c| {
             let rows: QueryResult<usize>;
             if ids.len() > 0 {
-                rows = diesel::update(all_users.filter(user_id.eq_any(ids)))
-                    .set(user_approved.eq(value))
-                    .execute(c);
+                rows = diesel::update(
+                    all_users.filter(user_id.eq_any(ids).and(user_approved.eq(!value))),
+                )
+                .set(user_approved.eq(value))
+                .execute(c);
             } else {
-                rows = diesel::update(all_users)
+                rows = diesel::update(all_users.filter(user_approved.eq(!value)))
                     .set(user_approved.eq(value))
                     .execute(c);
             }
