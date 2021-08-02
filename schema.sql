@@ -12,7 +12,8 @@ DROP TABLE IF EXISTS items;
 CREATE TABLE items (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
-    body TEXT NOT NULL,
+    html TEXT NOT NULL,
+    markdown TEXT NOT NULL,
     discussed_on DATE DEFAULT NULL
 );
 

@@ -8,7 +8,7 @@
   <div class="card-body">
     <h5 class="card-title">{{ next.title }}</h5>
     <hr>
-    <div class="card-text">{{ next.body | safe }}</div>
+    <div class="card-text">{{ next.html | safe }}</div>
   </div>
 </div>
 {% endif %}
@@ -20,7 +20,7 @@
   <div class="card-body">
     <h5 class="card-title">{{ winner.title }}</h5>
     <hr>
-    <div class="card-text">{{ winner.body | safe }}</div>
+    <div class="card-text">{{ winner.html | safe }}</div>
   </div>
 </div>
 {% endif %}

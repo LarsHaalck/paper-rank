@@ -6,15 +6,26 @@ use chrono::{NaiveDate, Utc};
 pub struct Item {
     pub id: i32,
     pub title: String,
-    pub body: String,
+    pub html: String,
+    pub markdown: String,
     pub discussed_on: Option<NaiveDate>,
 }
 
 #[derive(FromForm, Insertable)]
 #[table_name = "items"]
-pub struct ItemData {
+pub struct NewItemData {
     pub title: String,
-    pub body: String,
+    pub html: String,
+    pub markdown: String,
+}
+
+#[derive(FromForm)]
+pub struct ChangeItemData {
+    pub id: i32,
+    pub title: String,
+    pub html: String,
+    pub markdown: String,
+    pub discussed_on: String,
 }
 
 impl Item {
@@ -26,7 +37,7 @@ impl Item {
                         .eq(&uid)
                         .and(vote_item_id.eq(self::schema::items::id))),
                 )
-                .filter(discussed_on.is_null())
+                .filter(item_discussed_on.is_null())
                 .order((vote_user_id.desc(), ordinal.asc()))
                 .select((self::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(c)
@@ -38,8 +49,8 @@ impl Item {
     pub async fn get_decided(conn: &DbConn) -> Option<Item> {
         conn.run(move |c| {
             let item = all_items
-                .filter(discussed_on.is_not_null())
-                .order(discussed_on.desc())
+                .filter(item_discussed_on.is_not_null())
+                .order(item_discussed_on.desc())
                 .limit(1)
                 .get_result::<Item>(c)
                 .ok()?;
@@ -57,20 +68,55 @@ impl Item {
     pub async fn get_history(conn: &DbConn) -> Vec<Item> {
         conn.run(move |c| {
             all_items
-                .filter(discussed_on.is_not_null())
-                .order(discussed_on.desc())
+                .filter(item_discussed_on.is_not_null())
+                .order(item_discussed_on.desc())
                 .load::<Item>(c)
                 .unwrap_or(Vec::new())
         })
         .await
     }
-}
 
-impl ItemData {
-    pub async fn add(self, conn: &DbConn) -> Result<(), Error> {
+    pub async fn get_all(conn: &DbConn) -> Vec<Item> {
+        conn.run(move |c| all_items.load::<Item>(c).unwrap_or(Vec::new()))
+            .await
+    }
+
+    pub async fn get_by_id(id: i32, conn: &DbConn) -> Option<Item> {
+        conn.run(move |c| {
+            let item = all_items
+                .filter(item_id.eq(id))
+                .get_result::<Item>(c)
+                .ok()?;
+            Some(item)
+        })
+        .await
+    }
+
+    pub async fn add(item_data: NewItemData, conn: &DbConn) -> Result<(), Error> {
         conn.run(move |c| {
             diesel::insert_into(all_items)
-                .values(&self)
+                .values(&item_data)
+                .execute(c)
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
+            Ok(())
+        })
+        .await
+    }
+
+    pub async fn update(item_data: ChangeItemData, conn: &DbConn) -> Result<(), Error> {
+        use self::schema::items::dsl::{html, markdown, title};
+        use std::ops::Not;
+
+        conn.run(move |c| {
+            let discussed_on = &item_data.discussed_on;
+            let discussed = discussed_on.is_empty().not().then(|| discussed_on);
+            diesel::update(all_items.filter(item_id.eq(item_data.id)))
+                .set((
+                    title.eq(item_data.title),
+                    html.eq(item_data.html),
+                    markdown.eq(item_data.markdown),
+                    item_discussed_on.eq(discussed),
+                ))
                 .execute(c)
                 .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
             Ok(())

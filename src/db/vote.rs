@@ -22,7 +22,7 @@ impl Vote {
         conn.run(move |c| {
             let votes = all_votes
                 .inner_join(all_items)
-                .filter(discussed_on.is_null())
+                .filter(item_discussed_on.is_null())
                 .order((vote_user_id.asc(), ordinal.asc()))
                 .select((vote_user_id, vote_item_id, ordinal))
                 .get_results::<Vote>(c)
@@ -38,7 +38,7 @@ impl Vote {
             let winner = winner.as_ref()?;
             let votes = all_votes
                 .inner_join(all_items)
-                .filter(discussed_on.is_null())
+                .filter(item_discussed_on.is_null())
                 .filter(vote_item_id.ne(winner.id))
                 .order((vote_user_id.asc(), ordinal.asc()))
                 .select((vote_user_id, vote_item_id, ordinal))

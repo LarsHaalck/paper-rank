@@ -36,8 +36,15 @@
     <div class="col">
     <h4>Markdown:</h4>
     <hr>
-    <form action="new_item" method="post" class="mt-3" id="new_form"></form>
-    <textarea id="markdown" class="p-2", form="new_form" name="body" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required>
+    {% if item %}
+        <form action="update_item" method="post" class="mt-3" id="new_form"></form>
+        <input type="hidden" name="id" form="new_form" value="{{ item.id }}">
+    {% else %}
+        <form action="new_item" method="post" class="mt-3" id="new_form"></form>
+    {% endif %}
+    <input type="hidden" name="html" form="new_form">
+<textarea id="markdown" class="p-2", form="new_form" name="markdown" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required>
+{% if item %}{{ item.markdown }}{% else %}
 Author et al.
 
 -------
@@ -57,8 +64,10 @@ Links, e.g. Github, Youtube, Springer, Arxiv, Projectpage:
 * [link1](https://link1.com)
 * [link2](https://link2.com)
 * [link3](https://link3.com)
-    </textarea>
-    <input form="new_form" class="form-control" type="text" placeholder="Enter Paper Title" name="title" required autofocus />
+{% endif %}
+</textarea>
+    <input form="new_form" class="form-control" type="text" placeholder="Enter Paper Title" name="title" value="{% if item %}{{ item.title }}{% endif %}" required autofocus />
+    <input type="date" name="discussed_on" form="new_form" value="{% if item %}{{ item.discussed_on }}{% endif %}">
     <div class="row">
         <div class="col">
             <button id="preview" type="submit" class="mt-3 btn btn-primary">Preview</button>

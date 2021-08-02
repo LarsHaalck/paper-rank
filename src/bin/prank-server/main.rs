@@ -14,9 +14,9 @@ use rocket::serde::json::Json;
 use rocket::Request;
 use rocket_dyn_templates::Template;
 
-use context::{Empty, HistoryContext, UserContext, VoteContext};
+use context::{EditContext, Empty, ItemContext, UserContext, VoteContext};
 use markdown::markdown_to_html;
-use prank::item::{Item, ItemData};
+use prank::item::{ChangeItemData, Item, NewItemData};
 use prank::user::{AdminUser, NewPassword, NewUser, User};
 use prank::vote::{Ballot, Vote};
 use prank::DbConn;
@@ -96,17 +96,31 @@ async fn preview(markdown: &str, _user: &User, _conn: DbConn) -> Result<String, 
 }
 
 #[post("/new_item", data = "<item>")]
-async fn add_new_item(item: Form<ItemData>, _user: &User, conn: DbConn) -> Flash<Redirect> {
+async fn add_new_item(item: Form<NewItemData>, _user: &User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
-    let html = match markdown_to_html(&item_data.body) {
+    item_data.html = match markdown_to_html(&item_data.markdown) {
         Ok(html) => html,
         Err(e) => return Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
     };
 
-    item_data.body = html;
-    let res = item_data.add(&conn).await;
+    let res = Item::add(item_data, &conn).await;
     match res {
         Ok(_) => Flash::success(Redirect::to(uri!(index)), "Added item to db"),
+        Err(e) => Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
+    }
+}
+
+#[post("/update_item", data = "<item>")]
+async fn update_item(item: Form<ChangeItemData>, _user: &User, conn: DbConn) -> Flash<Redirect> {
+    let mut item_data = item.into_inner();
+    item_data.html = match markdown_to_html(&item_data.markdown) {
+        Ok(html) => html,
+        Err(e) => return Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
+    };
+
+    let res = Item::update(item_data, &conn).await;
+    match res {
+        Ok(_) => Flash::success(Redirect::to(uri!(index)), "Changed item in db"),
         Err(e) => Flash::error(Redirect::to(uri!(add_new_item)), e.to_string()),
     }
 }
@@ -119,15 +133,32 @@ async fn history(flash: Option<FlashMessage<'_>>, user: &User, conn: DbConn) -> 
     let flash = flash.map(FlashMessage::into_inner);
     Template::render(
         "history",
-        HistoryContext::for_user(user, &conn, flash).await,
+        ItemContext::for_user_history(user, &conn, flash).await,
     )
 }
 
-// #[get("/edit")]
-// async fn edit(flash: Option<FlashMessage<'_>>, admin: AdminUser<'_>, _conn: DbConn) -> Template {
-//     let flash = flash.map(FlashMessage::into_inner);
-//     Template::render("user", UserContext::for_user(&admin.user, flash).await)
-// }
+#[get("/edit?<id>")]
+async fn edit_id(
+    id: i32,
+    flash: Option<FlashMessage<'_>>,
+    admin: AdminUser<'_>,
+    conn: DbConn,
+) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render(
+        "item",
+        EditContext::for_user(id, admin.user, &conn, flash).await,
+    )
+}
+
+#[get("/show")]
+async fn edit(flash: Option<FlashMessage<'_>>, admin: AdminUser<'_>, conn: DbConn) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render(
+        "show",
+        ItemContext::for_user_full(admin.user, &conn, flash).await,
+    )
+}
 
 #[get("/user")]
 async fn user_user(flash: Option<FlashMessage<'_>>, user: &User, _conn: DbConn) -> Template {
@@ -142,9 +173,9 @@ async fn user(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 }
 
 #[get("/new_item")]
-async fn new_item(flash: Option<FlashMessage<'_>>, user: &User, conn: DbConn) -> Template {
+async fn new_item(flash: Option<FlashMessage<'_>>, user: &User, _conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("new_item", VoteContext::for_user(user, &conn, flash).await)
+    Template::render("item", UserContext::for_user(user, flash).await)
 }
 
 #[get("/")]
@@ -172,7 +203,7 @@ fn rocket() -> _ {
         .register("/", catchers![not_found])
         .mount(
             "/",
-            routes![index, index_user, new_item, user, user_user, history],
+            routes![index, index_user, new_item, user, user_user, history, edit, edit_id],
         )
         .mount(
             "/",
@@ -183,7 +214,8 @@ fn rocket() -> _ {
                 change_password,
                 vote,
                 preview,
-                add_new_item
+                add_new_item,
+                update_item
             ],
         );
 

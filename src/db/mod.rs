@@ -24,7 +24,8 @@ mod schema {
         items {
             id -> Integer,
             title -> Text,
-            body -> Text,
+            html -> Text,
+            markdown -> Text,
             discussed_on -> Nullable<Date>,
         }
     }
@@ -46,7 +47,9 @@ use self::schema::items;
 use self::schema::users;
 use self::schema::votes;
 
-use self::schema::items::dsl::{discussed_on, items as all_items};
+use self::schema::items::dsl::{
+    discussed_on as item_discussed_on, id as item_id, items as all_items,
+};
 use self::schema::users::dsl::{
     id as user_id, is_approved as user_approved, password as user_password,
     username as user_username, users as all_users,

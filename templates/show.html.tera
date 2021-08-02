@@ -1,16 +1,12 @@
 {% extends "base" %}
 {% block content %}
-{% if items | length > 0 %}
-<h4>History:</h4>
-{% else %}
-<div class="alert alert-info mt-3" role="alert">
-    No Paper in the history
-</div>
-{% endif %}
 {% for item in items %}
 <details class="card">
     <summary class="card-body">
-        <h5 class="card-title d-inline">{{ item.title }}</h5>
+        <a href="/edit?id={{ item.id }}">
+            <button type="submit" class="btn btn-warning">Edit...</button>
+        </a>
+        <b class="card-title d-inline">{{ item.title }}</b>
         <span class="float-right">{{ item.discussed_on }}</span>
     </summary>
     <hr>

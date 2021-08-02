@@ -24,7 +24,7 @@ pub struct VoteContext {
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct HistoryContext {
+pub struct ItemContext {
     items: Vec<Item>,
     context: Context,
 }
@@ -33,6 +33,13 @@ pub struct HistoryContext {
 #[serde(crate = "rocket::serde")]
 pub struct UserContext {
     context: Context,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct EditContext {
+    item: Option<Item>,
+    context: Context
 }
 
 impl Context {
@@ -93,14 +100,38 @@ impl UserContext {
     }
 }
 
-impl HistoryContext {
-    pub async fn for_user(
+impl ItemContext {
+    pub async fn for_user_history(
         user: &User,
         conn: &DbConn,
         flash: Option<(String, String)>,
-    ) -> HistoryContext {
-        HistoryContext {
+    ) -> ItemContext {
+        ItemContext {
             items: Item::get_history(conn).await,
+            context: Context::for_user(user, flash),
+        }
+    }
+    pub async fn for_user_full(
+        user: &User,
+        conn: &DbConn,
+        flash: Option<(String, String)>,
+    ) -> ItemContext {
+        ItemContext {
+            items: Item::get_all(conn).await,
+            context: Context::for_user(user, flash),
+        }
+    }
+}
+
+impl EditContext {
+    pub async fn for_user(
+        id: i32,
+        user: &User,
+        conn: &DbConn,
+        flash: Option<(String, String)>,
+    ) -> EditContext {
+        EditContext {
+            item: Item::get_by_id(id, conn).await,
             context: Context::for_user(user, flash),
         }
     }

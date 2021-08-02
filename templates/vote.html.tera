@@ -8,7 +8,7 @@
   <div class="card-body">
     <h5 class="card-title">{{ next.title }}</h5>
     <hr>
-    <div class="card-text">{{ next.body | safe }}</div>
+    <div class="card-text">{{ next.html | safe }}</div>
   </div>
 </div>
 {% endif %}
@@ -22,7 +22,7 @@
         <h5 class="card-title d-inline">{{ winner.title }}</h5>
     </summary>
     <hr>
-    <div class="card-text">{{ winner.body | safe }}</div>
+    <div class="card-text">{{ winner.html | safe }}</div>
   </details>
 </div>
 {% if second %}
@@ -35,7 +35,7 @@
         <h5 class="card-title d-inline">{{ second.title }}</h5>
     </summary>
     <hr>
-    <div class="card-text">{{ second.body | safe }}</div>
+    <div class="card-text">{{ second.html | safe }}</div>
   </details>
 </div>
 {% endif %}
@@ -59,7 +59,7 @@
             <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
         </summary>
         <hr>
-        <div class="mb-1">{{ item.0.body | safe }}</div>
+        <div class="mb-1">{{ item.0.html | safe }}</div>
     </details>
     {% endif %}
     {% endif %}
@@ -75,7 +75,7 @@
             <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
         </summary>
         <hr>
-        <div class="mb-1">{{ item.0.body | safe }}</div>
+        <div class="mb-1">{{ item.0.html | safe }}</div>
     </details>
     {% endif %}
     {% endif %}
