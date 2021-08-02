@@ -157,7 +157,7 @@ impl User {
         .await
     }
 
-    pub async fn show(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
+    pub async fn get(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
         conn.run(move |c| {
             let users: QueryResult<Vec<UserDB>>;
             if ids.len() > 0 {
@@ -201,7 +201,7 @@ impl User {
         conn.run(move |c| {
             let rows = diesel::delete(all_users.filter(user_id.eq_any(ids)))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to approve users in db."))?;
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to delete users from db."))?;
             Ok(rows)
         })
         .await

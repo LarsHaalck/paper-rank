@@ -13,6 +13,7 @@ This tool started as a fork of
 * History site, where old entries are archived
 * Pin upcoming topics to make them unvotable but still show them to all users
 * Dockerfile and docker-compose for easy deployment
+* small adming page to edit items and change the dates
 
 As the original version [jonhoo/vote.rs](https://github.com/jonhoo/vote.rs),
 this tool uses 
@@ -51,36 +52,41 @@ The web interface will now be available on port `8000`.
 
 ## Usage
 ### User Management
-Users must register using the icon in the top right corner and must be approved by changing the column in the database:
+Users must register using the icon in the top right corner and must be approved by using the cli tool:
 
 
-```sql
-UPDATE users SET is_approved = true WHERE id = ?;
+```console
+prankctl users approve <id>
 ```
 
-Where `?` is the ID of the user, which you can find with
+where a user id can be found using
 
-```sql
-SELECT id, username FROM users WHERE is_approved = false;
+```console
+prankctl users show --all
 ```
+
+For other commands see
+```console
+prankctl --help
+```
+
 
 ### Item Management
 Items can be added by every user using the button `New Item` in the navigation bar.
 
-Pinning a topic before the event is done by setting the `discussed_on` column to the date of the event which must be in the future:
-```sql
-UPDATE items SET discussed_on = "2099-01-05" WHERE id = ?;
+Pinning a topic before the event should be done by using the site `/show`.
+An item can be edited by clicking the edit button and then changing the date.
+
+The cli tool can also be used using
+```console
+prankctl items discuss-on <id> <date>
 ```
 
-Where `?` is the ID of the item, which you can find with
+or 
 
-```sql
-SELECT id, title FROM items WHERE discussed_on IS NULL;
+```console
+prankctl items cancel-discuss <id>
 ```
 
-All items where `discussed_on` is `NULL` remain voteble.
+All items where `discussed_on` is `NULL` (or unset) remain voteble.
 The item will display at the top of the start page and at the top of the voting page until the date is reached (using UTC timezone) and only one item will be shown if multiple items have a date in the future (the item with a date that is "further away").
-
-## TODOs:
-* [ ] Implement a small CLI tool to avoid working with sqlite directly.
-

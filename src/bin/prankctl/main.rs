@@ -1,9 +1,11 @@
 use structopt::StructOpt;
 
 use prank::user::User;
+use prank::item::Item;
 use prank::DbConn;
 use rocket::fairing::Fairing;
 use std::io::Error;
+use chrono::NaiveDate;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -17,16 +19,20 @@ enum UsersSubcommand {
     Approve(Options),
     Reject(Options),
     Show(Options),
-    Delete {
-        #[structopt(required = true)]
-        ids: Vec<i32>,
-    },
+    Delete(IdsOnly)
 }
 
 #[derive(StructOpt, Debug)]
 enum ItemsSubcommand {
-    Delete(Options),
     Show(Options),
+    Delete(IdsOnly),
+    DiscussOn {
+        id: i32,
+        date: NaiveDate
+    },
+    CancelDiscuss {
+        id: i32
+    }
 }
 
 #[derive(StructOpt, Debug)]
@@ -34,6 +40,11 @@ struct Options {
     #[structopt(long)]
     all: bool,
     #[structopt(conflicts_with = "all", required_unless = "all")]
+    ids: Vec<i32>,
+}
+
+#[derive(StructOpt, Debug)]
+struct IdsOnly {
     ids: Vec<i32>,
 }
 
@@ -50,13 +61,13 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<(),
             println!("Rejected {} users", rows);
             Ok(())
         }
-        Delete { ids } => {
-            let rows = User::delete(ids, conn).await?;
+        Delete(o) => {
+            let rows = User::delete(o.ids, conn).await?;
             println!("Deleted {} users", rows);
             Ok(())
         }
         Show(o) => {
-            let users = User::show(o.ids, conn).await?;
+            let users = User::get(o.ids, conn).await?;
             println!("Found {} users", users.len());
             users.iter().for_each(|u| println!("{:?}", u));
             Ok(())
@@ -64,8 +75,31 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<(),
     };
 }
 
-async fn handle_items_command(_cmd: ItemsSubcommand, _conn: &DbConn) -> Result<(), Error> {
-    Ok(())
+async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(), Error> {
+    use ItemsSubcommand::*;
+    return match cmd {
+        Show(o) => {
+            let items = Item::get(o.ids, conn).await?;
+            println!("Found {} items", items.len());
+            items.iter().for_each(|u| println!("{:?}", u));
+            Ok(())
+        }
+        Delete(o) => {
+            let rows = Item::delete(o.ids, conn).await?;
+            println!("Deleted {} items", rows);
+            Ok(())
+        }
+        DiscussOn { id, date } => {
+            Item::set_discussed(id, Some(date), conn).await?;
+            println!("Updated item {}", id);
+            Ok(())
+        },
+        CancelDiscuss { id } => {
+            Item::set_discussed(id, None, conn).await?;
+            println!("Updated item {}", id);
+            Ok(())
+        }
+    }
 }
 
 async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<(), Error> {
