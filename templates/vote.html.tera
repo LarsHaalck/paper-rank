@@ -55,7 +55,7 @@
     {% if item.1 is number %}
     {% if not item.0.done %}
     <details class="list-group-item list-group-item-action flex-column align-items-start" data-id="{{ item.0.id }}">
-        <summary class"dragger">
+        <summary class="dragger">
             <h5 class="mb-1 d-inline">{{ item.0.title }}</h5>
         </summary>
         <hr>
