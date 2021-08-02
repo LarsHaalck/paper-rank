@@ -22,13 +22,14 @@ struct UserDB {
 pub struct User {
     pub id: i32,
     pub username: String,
+    pub is_admin: bool,
     pub is_approved: bool,
 }
 
-// #[derive(Debug)]
-// pub struct AdminUser {
-//     pub user: User,
-// }
+#[derive(Debug)]
+pub struct AdminUser<'a> {
+    pub user: &'a User,
+}
 
 #[derive(FromForm, Insertable, Debug)]
 #[table_name = "users"]
@@ -76,11 +77,7 @@ impl NewUser {
                 .map_err(|_| Error::new(ErrorKind::NotFound, "User not found or not approved."))?;
 
             password::verify(&self.password, &user.password)?;
-            Ok(User {
-                id: user.id,
-                username: user.username,
-                is_approved: user.is_approved,
-            })
+            Ok(User::from(user))
         })
         .await
     }
@@ -111,6 +108,17 @@ impl NewUser {
     }
 }
 
+impl From<UserDB> for User {
+    fn from(u: UserDB) -> Self {
+        Self {
+            id: u.id,
+            username: u.username,
+            is_admin: u.is_admin,
+            is_approved: u.is_approved,
+        }
+    }
+}
+
 impl User {
     pub async fn from_id(id: i32, conn: &DbConn) -> Option<User> {
         let user = conn
@@ -122,27 +130,24 @@ impl User {
                     .ok()
             })
             .await?;
-        Some(User {
-            id: user.id,
-            username: user.username,
-            is_approved: user.is_approved,
-        })
+        Some(User::from(user))
     }
 
     pub async fn change_password(
-        self,
+        user: &User,
         new_password: NewPassword,
         conn: &DbConn,
     ) -> Result<(), Error> {
+        let id = user.id;
         conn.run(move |c| {
             let user = all_users
-                .filter(user_id.eq(self.id))
+                .filter(user_id.eq(id))
                 .get_result::<UserDB>(c)
                 .map_err(|_| Error::new(ErrorKind::NotFound, "User not found in db."))?;
 
             password::verify(&new_password.old_password, &user.password)?;
             let hash = password::generate_new_hash(&new_password.new_password)?;
-            diesel::update(all_users.filter(user_id.eq(self.id)))
+            diesel::update(all_users.filter(user_id.eq(user.id)))
                 .set(user_password.eq(hash))
                 .execute(c)
                 .map_err(|_| Error::new(ErrorKind::Other, "Faile to write into db."))?;
@@ -166,11 +171,7 @@ impl User {
             let users = users
                 .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
                 .into_iter()
-                .map(|u| User {
-                    id: u.id,
-                    username: u.username,
-                    is_approved: u.is_approved,
-                })
+                .map(|u| User::from(u))
                 .collect();
             Ok(users)
         })
@@ -208,19 +209,36 @@ impl User {
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for User {
+impl<'r> FromRequest<'r> for &'r User {
     type Error = ();
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<User, ()> {
-        let conn = try_outcome!(request.guard::<DbConn>().await);
-        let r = request
-            .cookies()
-            .get_private("user_id")
-            .and_then(|cookie| cookie.value().parse().ok())
-            .or_forward(());
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
+        let user_result = request
+            .local_cache_async(async {
+                let conn = request.guard::<DbConn>().await.succeeded()?;
+                let r = request
+                    .cookies()
+                    .get_private("user_id")
+                    .and_then(|cookie| cookie.value().parse().ok())?;
 
-        let r = try_outcome!(r);
-        let user = User::from_id(r, &conn).await;
-        user.or_forward(())
+                User::from_id(r, &conn).await
+            })
+            .await;
+
+        user_result.as_ref().or_forward(())
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AdminUser<'r> {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
+        let user = try_outcome!(request.guard::<&User>().await);
+        if user.is_admin {
+            Outcome::Success(AdminUser { user })
+        } else {
+            Outcome::Forward(())
+        }
     }
 }

@@ -17,7 +17,7 @@ use rocket_dyn_templates::Template;
 use context::{Empty, HistoryContext, UserContext, VoteContext};
 use markdown::markdown_to_html;
 use prank::item::{Item, ItemData};
-use prank::user::{NewPassword, NewUser, User};
+use prank::user::{AdminUser, NewPassword, NewUser, User};
 use prank::vote::{Ballot, Vote};
 use prank::DbConn;
 
@@ -72,9 +72,9 @@ async fn register(input: Form<NewUser>, conn: DbConn) -> Flash<Redirect> {
 }
 
 #[post("/change_password", data = "<input>")]
-async fn change_password(input: Form<NewPassword>, user: User, conn: DbConn) -> Flash<Redirect> {
+async fn change_password(input: Form<NewPassword>, user: &User, conn: DbConn) -> Flash<Redirect> {
     let new_password = input.into_inner();
-    let change = user.change_password(new_password, &conn).await;
+    let change = User::change_password(&user, new_password, &conn).await;
     match change {
         Ok(_) => Flash::success(Redirect::to(uri!(user)), "Sucessfully changed password"),
         Err(e) => Flash::error(Redirect::to(uri!(user)), e.to_string()),
@@ -82,7 +82,7 @@ async fn change_password(input: Form<NewPassword>, user: User, conn: DbConn) -> 
 }
 
 #[post("/vote", data = "<ballot>")]
-async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
+async fn vote(ballot: Json<Ballot>, user: &User, conn: DbConn) -> Status {
     let res = Vote::save_ballot(user.id, ballot.into_inner(), &conn).await;
     match res {
         Ok(_) => Status::Ok,
@@ -91,12 +91,12 @@ async fn vote(ballot: Json<Ballot>, user: User, conn: DbConn) -> Status {
 }
 
 #[post("/preview", data = "<markdown>")]
-async fn preview(markdown: &str, _user: User, _conn: DbConn) -> Result<String, std::io::Error> {
+async fn preview(markdown: &str, _user: &User, _conn: DbConn) -> Result<String, std::io::Error> {
     markdown_to_html(markdown)
 }
 
 #[post("/new_item", data = "<item>")]
-async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<Redirect> {
+async fn add_new_item(item: Form<ItemData>, _user: &User, conn: DbConn) -> Flash<Redirect> {
     let mut item_data = item.into_inner();
     let html = match markdown_to_html(&item_data.body) {
         Ok(html) => html,
@@ -115,7 +115,7 @@ async fn add_new_item(item: Form<ItemData>, _user: User, conn: DbConn) -> Flash<
 // GET Routes
 ///////////////////////////////////////////////////////////////////////////////
 #[get("/history")]
-async fn history(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+async fn history(flash: Option<FlashMessage<'_>>, user: &User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render(
         "history",
@@ -123,8 +123,14 @@ async fn history(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> T
     )
 }
 
+// #[get("/edit")]
+// async fn edit(flash: Option<FlashMessage<'_>>, admin: AdminUser<'_>, _conn: DbConn) -> Template {
+//     let flash = flash.map(FlashMessage::into_inner);
+//     Template::render("user", UserContext::for_user(&admin.user, flash).await)
+// }
+
 #[get("/user")]
-async fn user_user(flash: Option<FlashMessage<'_>>, user: User, _conn: DbConn) -> Template {
+async fn user_user(flash: Option<FlashMessage<'_>>, user: &User, _conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("user", UserContext::for_user(user, flash).await)
 }
@@ -136,13 +142,13 @@ async fn user(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
 }
 
 #[get("/new_item")]
-async fn new_item(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+async fn new_item(flash: Option<FlashMessage<'_>>, user: &User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("new_item", VoteContext::for_user(user, &conn, flash).await)
 }
 
 #[get("/")]
-async fn index_user(flash: Option<FlashMessage<'_>>, user: User, conn: DbConn) -> Template {
+async fn index_user(flash: Option<FlashMessage<'_>>, user: &User, conn: DbConn) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
     Template::render("vote", VoteContext::for_user(user, &conn, flash).await)
 }
@@ -166,7 +172,7 @@ fn rocket() -> _ {
         .register("/", catchers![not_found])
         .mount(
             "/",
-            routes![index, index_user, new_item, user, user_user, history],
+            routes![index, index_user, new_item, user, user_user, history, edit],
         )
         .mount(
             "/",
