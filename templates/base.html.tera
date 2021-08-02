@@ -15,7 +15,7 @@
     </head>
     <body>
         <nav class="navbar navbar-expand-sm navbar-dark bg-primary">
-            <a class="navbar-brand mb-0 h1" href="/">Vote for the next paper</a>
+            <a class="navbar-brand mb-0 h1" href="/">Paper-Rank</a>
             {% if context.username %}
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item"><a class="nav-link" href="/new_item">New Item</a></li>
