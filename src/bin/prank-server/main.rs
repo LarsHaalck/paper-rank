@@ -172,7 +172,7 @@ fn rocket() -> _ {
         .register("/", catchers![not_found])
         .mount(
             "/",
-            routes![index, index_user, new_item, user, user_user, history, edit],
+            routes![index, index_user, new_item, user, user_user, history],
         )
         .mount(
             "/",

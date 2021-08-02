@@ -81,7 +81,7 @@
     {% endif %}
     {% endfor %}
 </div>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script src="/Sortable.min.js"></script>
 <script>
 if (location.href.indexOf('login') !== -1) {
     location.href = location.href.replace("/login", "/");
