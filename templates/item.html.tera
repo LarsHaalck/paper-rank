@@ -45,7 +45,7 @@
     <input type="hidden" name="html" form="new_form">
 <textarea id="markdown" class="p-2", form="new_form" name="markdown" placeholder="Enter Paper Information, e.g. links, github, youtube as CommonMark markdown" required>
 {% if item %}{{ item.markdown }}{% else %}
-Author et al.
+Author et al., Year
 
 -------
 **Topic:**
