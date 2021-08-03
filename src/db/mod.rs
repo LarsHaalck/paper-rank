@@ -9,6 +9,9 @@ pub mod vote;
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
+//////////////////////////////
+// internal db stuff
+//////////////////////////////
 mod schema {
     table! {
         users {

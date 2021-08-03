@@ -202,10 +202,12 @@ fn rocket() -> _ {
         .attach(Template::fairing())
         .register("/", catchers![not_found])
         .mount(
+            // get routes
             "/",
             routes![index, index_user, new_item, user, user_user, history, edit, edit_id],
         )
         .mount(
+            // post routes
             "/",
             routes![
                 login,
@@ -219,10 +221,11 @@ fn rocket() -> _ {
             ],
         );
 
+    // retrieve static_dir paramtere from config and mount static route
     let static_dir = rocket
         .figment()
         .extract_inner::<RelativePathBuf>("static_dir")
         .map(|path| path.relative())
-        .unwrap();
+        .expect("Could not find static_dir entry in Rocket.toml");
     rocket.mount("/", FileServer::from(static_dir))
 }

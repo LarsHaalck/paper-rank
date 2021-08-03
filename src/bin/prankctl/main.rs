@@ -1,11 +1,11 @@
 use structopt::StructOpt;
 
-use prank::user::User;
+use chrono::NaiveDate;
 use prank::item::Item;
+use prank::user::User;
 use prank::DbConn;
 use rocket::fairing::Fairing;
 use std::io::Error;
-use chrono::NaiveDate;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -19,20 +19,15 @@ enum UsersSubcommand {
     Approve(Options),
     Reject(Options),
     Show(Options),
-    Delete(IdsOnly)
+    Delete(IdsOnly),
 }
 
 #[derive(StructOpt, Debug)]
 enum ItemsSubcommand {
     Show(Options),
     Delete(IdsOnly),
-    DiscussOn {
-        id: i32,
-        date: NaiveDate
-    },
-    CancelDiscuss {
-        id: i32
-    }
+    DiscussOn { id: i32, date: NaiveDate },
+    CancelDiscuss { id: i32 },
 }
 
 #[derive(StructOpt, Debug)]
@@ -93,13 +88,13 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
             Item::set_discussed(id, Some(date), conn).await?;
             println!("Updated item {}", id);
             Ok(())
-        },
+        }
         CancelDiscuss { id } => {
             Item::set_discussed(id, None, conn).await?;
             println!("Updated item {}", id);
             Ok(())
         }
-    }
+    };
 }
 
 async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<(), Error> {
@@ -112,9 +107,14 @@ async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<(), Error> {
 #[rocket::main]
 async fn main() {
     let args = PrankCtl::from_args();
-    let rocket = DbConn::fairing().on_ignite(rocket::build()).await.unwrap();
+    let rocket = DbConn::fairing()
+        .on_ignite(rocket::build())
+        .await
+        .expect("Unable to establish db connection.");
     let conn = DbConn::get_one(&rocket)
         .await
-        .expect("Unable to establish db connection");
-    handle_command(args, &conn).await.unwrap();
+        .expect("Unable to establish db connection.");
+    handle_command(args, &conn)
+        .await
+        .expect("Failed performing operation.");
 }

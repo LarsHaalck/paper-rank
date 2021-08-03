@@ -1,8 +1,8 @@
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{format_html, parse_document, Arena, ComrakOptions};
-
 use std::io::{Error, ErrorKind};
 
+// parse markdown to AST, remove images and parse to html afterwards
 pub fn markdown_to_html(md: &str) -> Result<String, Error> {
     let arena = Arena::new();
     let root = parse_document(&arena, md, &ComrakOptions::default());
