@@ -5,7 +5,7 @@ use prank::item::Item;
 use prank::user::User;
 use prank::DbConn;
 use rocket::fairing::Fairing;
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -29,6 +29,16 @@ enum ItemsSubcommand {
     Delete(IdsOnly),
     DiscussOn { id: i32, date: NaiveDate },
     CancelDiscuss { id: i32 },
+    Dump(ItemDumpCommand),
+}
+
+#[derive(StructOpt, Debug)]
+struct ItemDumpCommand {
+    #[structopt(long, conflicts_with = "markdown", required_unless = "markdown")]
+    html: bool,
+    #[structopt(long, conflicts_with = "html", required_unless = "html")]
+    markdown: bool,
+    id: i32,
 }
 
 #[derive(StructOpt, Debug)]
@@ -82,7 +92,12 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
         Show(o) => {
             let items = Item::from_ids(o.ids, conn).await?;
             println!("Found {} items", items.len());
-            items.iter().for_each(|u| println!("{:?}", u));
+            items.iter().for_each(|u| {
+                println!(
+                    "Item {{ id: {}, title: {}, markdown: <omitted>, discussed_on: {:?} }}",
+                    u.id, u.title, u.discussed_on
+                );
+            });
             Ok(())
         }
         Delete(o) => {
@@ -98,6 +113,22 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
         CancelDiscuss { id } => {
             Item::set_discussed(id, None, conn).await?;
             println!("Updated item {}", id);
+            Ok(())
+        }
+        Dump(o) => {
+            let dump = Item::from_id(o.id, conn)
+                .await
+                .ok_or(Error::new(ErrorKind::NotFound, "Item not found"))?;
+            println!("Dump of item with id {}:", o.id);
+            println!("##############################");
+
+            if o.html {
+                println!("<h1>{}</h1>", dump.title);
+                println!("{}", dump.html);
+            } else {
+                println!("{}\n-------", dump.title);
+                println!("{}", dump.markdown);
+            }
             Ok(())
         }
     };
