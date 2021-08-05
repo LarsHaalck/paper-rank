@@ -29,7 +29,7 @@ pub struct ChangeItemData {
 }
 
 impl Item {
-    pub async fn for_user(uid: i32, conn: &DbConn) -> Vec<(Item, Option<i32>)> {
+    pub async fn get_user_and_votes(uid: i32, conn: &DbConn) -> Vec<(Item, Option<i32>)> {
         conn.run(move |c| {
             all_items
                 .left_join(
@@ -81,13 +81,28 @@ impl Item {
             .await
     }
 
-    pub async fn get_by_id(id: i32, conn: &DbConn) -> Option<Item> {
+    pub async fn from_id(id: i32, conn: &DbConn) -> Option<Item> {
         conn.run(move |c| {
             let item = all_items
                 .filter(item_id.eq(id))
                 .get_result::<Item>(c)
                 .ok()?;
             Some(item)
+        })
+        .await
+    }
+
+    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<Item>, Error> {
+        conn.run(move |c| {
+            let items: QueryResult<Vec<Item>>;
+            if ids.len() > 0 {
+                items = all_items.filter(item_id.eq_any(ids)).get_results::<Item>(c);
+            } else {
+                items = all_items.get_results::<Item>(c);
+            }
+
+            Ok(items
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve items form db."))?)
         })
         .await
     }
@@ -124,21 +139,6 @@ impl Item {
         .await
     }
 
-    pub async fn get(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<Item>, Error> {
-        conn.run(move |c| {
-            let items: QueryResult<Vec<Item>>;
-            if ids.len() > 0 {
-                items = all_items.filter(item_id.eq_any(ids)).get_results::<Item>(c);
-            } else {
-                items = all_items.get_results::<Item>(c);
-            }
-
-            Ok(items
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve items form db."))?)
-        })
-        .await
-    }
-
     pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize, Error> {
         conn.run(move |c| {
             let rows = diesel::delete(all_items.filter(item_id.eq_any(ids)))
@@ -149,7 +149,11 @@ impl Item {
         .await
     }
 
-    pub async fn set_discussed(id: i32, date: Option<NaiveDate>, conn: &DbConn) -> Result<(), Error> {
+    pub async fn set_discussed(
+        id: i32,
+        date: Option<NaiveDate>,
+        conn: &DbConn,
+    ) -> Result<(), Error> {
         conn.run(move |c| {
             diesel::update(all_items.filter(item_id.eq(id)))
                 .set(item_discussed_on.eq(date))

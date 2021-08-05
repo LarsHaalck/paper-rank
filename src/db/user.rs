@@ -7,6 +7,9 @@ use pbkdf2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Pbkdf2,
 };
+
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use rand_core::OsRng;
 
 #[derive(Queryable, Debug)]
@@ -65,6 +68,14 @@ mod password {
             .map_err(|_| Error::new(ErrorKind::InvalidInput, "Failed hashing password."))?
             .to_string())
     }
+
+    pub fn generate_random_password() -> String {
+        thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect()
+    }
 }
 
 impl NewUser {
@@ -101,7 +112,7 @@ impl NewUser {
             diesel::insert_into(all_users)
                 .values(&new_user)
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Faile to write into db."))?;
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
             Ok(())
         })
         .await
@@ -133,6 +144,27 @@ impl User {
         Some(User::from(user))
     }
 
+    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
+        conn.run(move |c| {
+            let users: QueryResult<Vec<UserDB>>;
+            if ids.len() > 0 {
+                users = all_users
+                    .filter(user_id.eq_any(ids))
+                    .get_results::<UserDB>(c);
+            } else {
+                users = all_users.get_results::<UserDB>(c);
+            }
+
+            let users = users
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
+                .into_iter()
+                .map(|u| User::from(u))
+                .collect();
+            Ok(users)
+        })
+        .await
+    }
+
     pub async fn change_password(
         user: &User,
         new_password: NewPassword,
@@ -150,30 +182,27 @@ impl User {
             diesel::update(all_users.filter(user_id.eq(user.id)))
                 .set(user_password.eq(hash))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Faile to write into db."))?;
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
 
             Ok(())
         })
         .await
     }
 
-    pub async fn get(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
+    pub async fn set_random_password(id: i32, conn: &DbConn) -> Result<String, Error> {
         conn.run(move |c| {
-            let users: QueryResult<Vec<UserDB>>;
-            if ids.len() > 0 {
-                users = all_users
-                    .filter(user_id.eq_any(ids))
-                    .get_results::<UserDB>(c);
-            } else {
-                users = all_users.get_results::<UserDB>(c);
-            }
+            let password = password::generate_random_password();
+            let hash = password::generate_new_hash(&password)?;
+            let rows = diesel::update(all_users.filter(user_id.eq(id)))
+                .set(user_password.eq(hash))
+                .execute(c)
+                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
 
-            let users = users
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
-                .into_iter()
-                .map(|u| User::from(u))
-                .collect();
-            Ok(users)
+            if rows > 0 {
+                Ok(password)
+            } else {
+                Err(Error::new(ErrorKind::NotFound, "User not found in db."))
+            }
         })
         .await
     }

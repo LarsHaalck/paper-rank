@@ -20,6 +20,7 @@ enum UsersSubcommand {
     Reject(Options),
     Show(Options),
     Delete(IdsOnly),
+    GeneratePassword { id: i32 },
 }
 
 #[derive(StructOpt, Debug)]
@@ -62,9 +63,14 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<(),
             Ok(())
         }
         Show(o) => {
-            let users = User::get(o.ids, conn).await?;
+            let users = User::from_ids(o.ids, conn).await?;
             println!("Found {} users", users.len());
             users.iter().for_each(|u| println!("{:?}", u));
+            Ok(())
+        }
+        GeneratePassword { id } => {
+            let pass = User::set_random_password(id, conn).await?;
+            println!("Set random password {} for id {}", pass, id);
             Ok(())
         }
     };
@@ -74,7 +80,7 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
     use ItemsSubcommand::*;
     return match cmd {
         Show(o) => {
-            let items = Item::get(o.ids, conn).await?;
+            let items = Item::from_ids(o.ids, conn).await?;
             println!("Found {} items", items.len());
             items.iter().for_each(|u| println!("{:?}", u));
             Ok(())
@@ -114,7 +120,7 @@ async fn main() {
     let conn = DbConn::get_one(&rocket)
         .await
         .expect("Unable to establish db connection.");
-    handle_command(args, &conn)
-        .await
-        .expect("Failed performing operation.");
+    if let Err(e) = handle_command(args, &conn).await {
+        println!("Error: {}", e);
+    }
 }

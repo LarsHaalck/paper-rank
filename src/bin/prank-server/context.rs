@@ -39,7 +39,7 @@ pub struct UserContext {
 #[serde(crate = "rocket::serde")]
 pub struct EditContext {
     item: Option<Item>,
-    context: Context
+    context: Context,
 }
 
 impl Context {
@@ -80,7 +80,7 @@ impl VoteContext {
             next: Item::get_decided(conn).await,
             winner,
             second,
-            items: Item::for_user(user.id, conn).await,
+            items: Item::get_user_and_votes(user.id, conn).await,
             context: Context::for_user(user, flash),
         }
     }
@@ -131,7 +131,7 @@ impl EditContext {
         flash: Option<(String, String)>,
     ) -> EditContext {
         EditContext {
-            item: Item::get_by_id(id, conn).await,
+            item: Item::from_id(id, conn).await,
             context: Context::for_user(user, flash),
         }
     }
