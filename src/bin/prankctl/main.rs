@@ -106,7 +106,7 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()>
 
 fn format_item(item: &Item, html: bool) -> String {
     if html {
-        format!("<h1>{}</h1>\n{}", item.title, item.html)
+        format!("<h3>{}</h3>\n{}", item.title, item.html)
     } else {
         format!("{}\n-------\n{}", item.title, item.markdown)
     }
