@@ -20,6 +20,7 @@ structopt = "0.3.22"
 futures = "0.3.16"
 anyhow = "1.0.42"
 lettre = { version = "0.10.0-rc.3", features = ["smtp-transport", "native-tls", "builder"] }
+rpassword = "5.0.1"
 
 [dependencies.rocket_dyn_templates]
 version = "0.1.0-rc.1"

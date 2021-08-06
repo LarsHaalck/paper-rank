@@ -7,7 +7,7 @@ use prank::DbConn;
 use rocket::fairing::Fairing;
 use anyhow::{Result, Error};
 
-// mod mail;
+mod mail;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -52,6 +52,10 @@ struct MailCommand {
     #[structopt(short = "t", long)]
     to: String,
     #[structopt(short = "s", long)]
+    subject: Option<String>,
+    #[structopt(short = "u", long)]
+    username: String,
+    #[structopt(short = "h", long)]
     server: String,
 }
 
@@ -104,7 +108,7 @@ fn format_item(item: &Item, html: bool) -> String {
     if html {
         format!("<h1>{}</h1>\n{}", item.title, item.html)
     } else {
-        format!("{}\n-------{}", item.title, item.markdown)
+        format!("{}\n-------\n{}", item.title, item.markdown)
     }
 }
 
@@ -147,10 +151,11 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()>
             Ok(())
         }
         Mail(o) => {
-            // let item = Item::from_id(o.id, conn)
-            //     .await
-            //     .ok_or(Error::msg("Item not found"))?;
-            // mail::send(&item, o.from, o.to, o.server)?;
+            let item = Item::from_id(o.id, conn)
+                .await
+                .ok_or(Error::msg("Item not found"))?;
+            mail::send(&item, o.from, o.to, o.subject, o.username, o.server)?;
+            println!("Send mail was successful");
             Ok(())
         }
     };
