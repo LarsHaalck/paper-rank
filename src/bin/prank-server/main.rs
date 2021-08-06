@@ -91,8 +91,8 @@ async fn vote(ballot: Json<Ballot>, user: &User, conn: DbConn) -> Status {
 }
 
 #[post("/preview", data = "<markdown>")]
-async fn preview(markdown: &str, _user: &User, _conn: DbConn) -> Result<String, std::io::Error> {
-    markdown_to_html(markdown)
+async fn preview(markdown: &str, _user: &User, _conn: DbConn) -> Option<String> {
+    markdown_to_html(markdown).ok()
 }
 
 #[post("/new_item", data = "<item>")]

@@ -92,7 +92,7 @@ impl Item {
         .await
     }
 
-    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<Item>, Error> {
+    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<Item>> {
         conn.run(move |c| {
             let items: QueryResult<Vec<Item>>;
             if ids.len() > 0 {
@@ -101,24 +101,23 @@ impl Item {
                 items = all_items.get_results::<Item>(c);
             }
 
-            Ok(items
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve items form db."))?)
+            Ok(items.context("Failed to retrieve items form db.")?)
         })
         .await
     }
 
-    pub async fn add(item_data: NewItemData, conn: &DbConn) -> Result<(), Error> {
+    pub async fn add(item_data: NewItemData, conn: &DbConn) -> Result<()> {
         conn.run(move |c| {
             diesel::insert_into(all_items)
                 .values(&item_data)
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
+                .context("Failed inserting new item into db.")?;
             Ok(())
         })
         .await
     }
 
-    pub async fn update(item_data: ChangeItemData, conn: &DbConn) -> Result<(), Error> {
+    pub async fn update(item_data: ChangeItemData, conn: &DbConn) -> Result<()> {
         use self::schema::items::dsl::{html, markdown, title};
         use std::ops::Not;
 
@@ -133,32 +132,28 @@ impl Item {
                     item_discussed_on.eq(discussed),
                 ))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
+                .context("Failed inserting new item into db.")?;
             Ok(())
         })
         .await
     }
 
-    pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize, Error> {
+    pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize> {
         conn.run(move |c| {
             let rows = diesel::delete(all_items.filter(item_id.eq_any(ids)))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to delete items from db."))?;
+                .context("Failed to delete items from db.")?;
             Ok(rows)
         })
         .await
     }
 
-    pub async fn set_discussed(
-        id: i32,
-        date: Option<NaiveDate>,
-        conn: &DbConn,
-    ) -> Result<(), Error> {
+    pub async fn set_discussed(id: i32, date: Option<NaiveDate>, conn: &DbConn) -> Result<()> {
         conn.run(move |c| {
             diesel::update(all_items.filter(item_id.eq(id)))
                 .set(item_discussed_on.eq(date))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed inserting new item into db."))?;
+                .context("Failed inserting new item into db.")?;
             Ok(())
         })
         .await

@@ -8,6 +8,7 @@ use pbkdf2::{
     Pbkdf2,
 };
 
+use anyhow::Error;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rand_core::OsRng;
@@ -50,22 +51,22 @@ pub struct NewPassword {
 mod password {
     use super::*;
 
-    pub fn verify(password: &String, hash: &String) -> Result<(), Error> {
+    pub fn verify(password: &String, hash: &String) -> Result<()> {
         // Verify password against PHC string
-        let parsed_hash = PasswordHash::new(hash)
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "Failed reading password."))?;
+        let parsed_hash =
+            PasswordHash::new(hash).map_err(|_| Error::msg("Failed reading password."))?;
         Pbkdf2
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "Wrong password."))?;
+            .map_err(|_| Error::msg("Failed reading password."))?;
         Ok(())
     }
 
-    pub fn generate_new_hash(password: &String) -> Result<String, Error> {
+    pub fn generate_new_hash(password: &String) -> Result<String> {
         let salt = SaltString::generate(&mut OsRng);
         // Hash password to PHC string ($pbkdf2-sha256$...)
         Ok(Pbkdf2
             .hash_password_simple(password.as_bytes(), salt.as_ref())
-            .map_err(|_| Error::new(ErrorKind::InvalidInput, "Failed hashing password."))?
+            .map_err(|_| Error::msg("Failed hashing password."))?
             .to_string())
     }
 
@@ -79,13 +80,13 @@ mod password {
 }
 
 impl NewUser {
-    pub async fn login(self, conn: &DbConn) -> Result<User, Error> {
+    pub async fn login(self, conn: &DbConn) -> Result<User> {
         conn.run(move |c| {
             let user = all_users
                 .filter(user_username.eq(&self.username))
                 .filter(user_approved)
                 .get_result::<UserDB>(c)
-                .map_err(|_| Error::new(ErrorKind::NotFound, "User not found or not approved."))?;
+                .context("User not found or not approved.")?;
 
             password::verify(&self.password, &user.password)?;
             Ok(User::from(user))
@@ -93,14 +94,14 @@ impl NewUser {
         .await
     }
 
-    pub async fn register(self, conn: &DbConn) -> Result<(), Error> {
+    pub async fn register(self, conn: &DbConn) -> Result<()> {
         conn.run(move |c| {
             let user = all_users
                 .filter(user_username.eq(&self.username))
                 .get_result::<UserDB>(c);
 
             if let Ok(_) = user {
-                return Err(Error::new(ErrorKind::AlreadyExists, "User already exists."));
+                return Err(Error::msg("User already exists."));
             }
 
             let password_hash = password::generate_new_hash(&self.password)?;
@@ -112,7 +113,7 @@ impl NewUser {
             diesel::insert_into(all_users)
                 .values(&new_user)
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
+                .context("Failed to write into db.")?;
             Ok(())
         })
         .await
@@ -144,7 +145,7 @@ impl User {
         Some(User::from(user))
     }
 
-    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>, Error> {
+    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<User>> {
         conn.run(move |c| {
             let users: QueryResult<Vec<UserDB>>;
             if ids.len() > 0 {
@@ -156,7 +157,7 @@ impl User {
             }
 
             let users = users
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to retrieve users form db."))?
+                .context("Failed to retrieve users form db.")?
                 .into_iter()
                 .map(|u| User::from(u))
                 .collect();
@@ -169,45 +170,45 @@ impl User {
         user: &User,
         new_password: NewPassword,
         conn: &DbConn,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let id = user.id;
         conn.run(move |c| {
             let user = all_users
                 .filter(user_id.eq(id))
                 .get_result::<UserDB>(c)
-                .map_err(|_| Error::new(ErrorKind::NotFound, "User not found in db."))?;
+                .context("User not found in db.")?;
 
             password::verify(&new_password.old_password, &user.password)?;
             let hash = password::generate_new_hash(&new_password.new_password)?;
             diesel::update(all_users.filter(user_id.eq(user.id)))
                 .set(user_password.eq(hash))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
+                .context("Failed to write into db.")?;
 
             Ok(())
         })
         .await
     }
 
-    pub async fn set_random_password(id: i32, conn: &DbConn) -> Result<String, Error> {
+    pub async fn set_random_password(id: i32, conn: &DbConn) -> Result<String> {
         conn.run(move |c| {
             let password = password::generate_random_password();
             let hash = password::generate_new_hash(&password)?;
             let rows = diesel::update(all_users.filter(user_id.eq(id)))
                 .set(user_password.eq(hash))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into db."))?;
+                .context("Failed to write into db.")?;
 
             if rows > 0 {
                 Ok(password)
             } else {
-                Err(Error::new(ErrorKind::NotFound, "User not found in db."))
+                Err(Error::msg("User not found in db."))
             }
         })
         .await
     }
 
-    pub async fn set_approve(ids: Vec<i32>, value: bool, conn: &DbConn) -> Result<usize, Error> {
+    pub async fn set_approve(ids: Vec<i32>, value: bool, conn: &DbConn) -> Result<usize> {
         conn.run(move |c| {
             let rows: QueryResult<usize>;
             if ids.len() > 0 {
@@ -221,18 +222,17 @@ impl User {
                     .set(user_approved.eq(value))
                     .execute(c);
             }
-            let rows =
-                rows.map_err(|_| Error::new(ErrorKind::Other, "Failed to approve users in db."))?;
+            let rows = rows.context("Failed to approve users in db.")?;
             Ok(rows)
         })
         .await
     }
 
-    pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize, Error> {
+    pub async fn delete(ids: Vec<i32>, conn: &DbConn) -> Result<usize> {
         conn.run(move |c| {
             let rows = diesel::delete(all_users.filter(user_id.eq_any(ids)))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to delete users from db."))?;
+                .context("Failed to delete users from db.")?;
             Ok(rows)
         })
         .await

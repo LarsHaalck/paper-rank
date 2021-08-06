@@ -1,6 +1,6 @@
+use anyhow::{Context, Result};
 use diesel::{self, prelude::*};
 use rocket::serde::{Deserialize, Serialize};
-use std::io::{Error, ErrorKind};
 
 pub mod item;
 pub mod user;

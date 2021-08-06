@@ -68,11 +68,11 @@ impl Vote {
         }
     }
 
-    pub async fn save_ballot(uid: i32, ballot: Ballot, conn: &DbConn) -> Result<(), Error> {
+    pub async fn save_ballot(uid: i32, ballot: Ballot, conn: &DbConn) -> Result<()> {
         conn.run(move |c| {
             diesel::delete(all_votes.filter(vote_user_id.eq(&uid)))
                 .execute(c)
-                .map_err(|_| Error::new(ErrorKind::Other, "Faile to write save ballow."))?;
+                .context("Faile to write save ballow.")?;
 
             for (i, iid) in ballot.votes.into_iter().enumerate() {
                 diesel::insert_into(all_votes)
@@ -82,7 +82,7 @@ impl Vote {
                         ordinal: i as i32,
                     })
                     .execute(c)
-                    .map_err(|_| Error::new(ErrorKind::Other, "Faile to write save ballow."))?;
+                    .context("Faile to write save ballow.")?;
             }
             Ok(())
         })

@@ -5,7 +5,9 @@ use prank::item::Item;
 use prank::user::User;
 use prank::DbConn;
 use rocket::fairing::Fairing;
-use std::io::{Error, ErrorKind};
+use anyhow::{Result, Error};
+
+// mod mail;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -30,6 +32,7 @@ enum ItemsSubcommand {
     DiscussOn { id: i32, date: NaiveDate },
     CancelDiscuss { id: i32 },
     Dump(ItemDumpCommand),
+    Mail(MailCommand),
 }
 
 #[derive(StructOpt, Debug)]
@@ -39,6 +42,17 @@ struct ItemDumpCommand {
     #[structopt(long, conflicts_with = "html", required_unless = "html")]
     markdown: bool,
     id: i32,
+}
+
+#[derive(StructOpt, Debug)]
+struct MailCommand {
+    id: i32,
+    #[structopt(short = "f", long)]
+    from: String,
+    #[structopt(short = "t", long)]
+    to: String,
+    #[structopt(short = "s", long)]
+    server: String,
 }
 
 #[derive(StructOpt, Debug)]
@@ -54,7 +68,7 @@ struct IdsOnly {
     ids: Vec<i32>,
 }
 
-async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<(), Error> {
+async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()> {
     use UsersSubcommand::*;
     return match cmd {
         Approve(o) => {
@@ -86,7 +100,15 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<(),
     };
 }
 
-async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(), Error> {
+fn format_item(item: &Item, html: bool) -> String {
+    if html {
+        format!("<h1>{}</h1>\n{}", item.title, item.html)
+    } else {
+        format!("{}\n-------{}", item.title, item.markdown)
+    }
+}
+
+async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()> {
     use ItemsSubcommand::*;
     return match cmd {
         Show(o) => {
@@ -116,25 +138,25 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<(),
             Ok(())
         }
         Dump(o) => {
-            let dump = Item::from_id(o.id, conn)
+            let item = Item::from_id(o.id, conn)
                 .await
-                .ok_or(Error::new(ErrorKind::NotFound, "Item not found"))?;
+                .ok_or(Error::msg("Item not found"))?;
             println!("Dump of item with id {}:", o.id);
             println!("##############################");
-
-            if o.html {
-                println!("<h1>{}</h1>", dump.title);
-                println!("{}", dump.html);
-            } else {
-                println!("{}\n-------", dump.title);
-                println!("{}", dump.markdown);
-            }
+            println!("{}", format_item(&item, o.html));
+            Ok(())
+        }
+        Mail(o) => {
+            // let item = Item::from_id(o.id, conn)
+            //     .await
+            //     .ok_or(Error::msg("Item not found"))?;
+            // mail::send(&item, o.from, o.to, o.server)?;
             Ok(())
         }
     };
 }
 
-async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<(), Error> {
+async fn handle_command(args: PrankCtl, conn: &DbConn) -> Result<()> {
     return match args {
         PrankCtl::Users(c) => handle_users_command(c, conn).await,
         PrankCtl::Items(c) => handle_items_command(c, conn).await,
