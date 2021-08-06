@@ -1,11 +1,11 @@
 use structopt::StructOpt;
 
+use anyhow::{Error, Result};
 use chrono::NaiveDate;
 use prank::item::Item;
 use prank::user::User;
 use prank::DbConn;
 use rocket::fairing::Fairing;
-use anyhow::{Result, Error};
 
 mod mail;
 
@@ -53,6 +53,8 @@ struct MailCommand {
     to: String,
     #[structopt(short = "s", long)]
     subject: Option<String>,
+    #[structopt(short = "c", long)]
+    comment: Option<String>,
     #[structopt(short = "u", long)]
     username: String,
     #[structopt(short = "h", long)]
@@ -154,7 +156,9 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()>
             let item = Item::from_id(o.id, conn)
                 .await
                 .ok_or(Error::msg("Item not found"))?;
-            mail::send(&item, o.from, o.to, o.subject, o.username, o.server)?;
+            mail::send(
+                &item, o.from, o.to, o.subject, o.comment, o.username, o.server,
+            )?;
             println!("Send mail was successful");
             Ok(())
         }
