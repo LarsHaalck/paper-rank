@@ -8,7 +8,7 @@ FROM debian:buster-slim
 WORKDIR /opt/prank
 COPY static ./static
 COPY templates ./templates
-RUN apt update && apt install -y libsqlite3-0 openssl && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y libsqlite3-0 openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/prank-server /usr/local/bin/prank-server
 COPY --from=builder /usr/local/cargo/bin/prankctl /usr/local/bin/prankctl
 EXPOSE 8000
