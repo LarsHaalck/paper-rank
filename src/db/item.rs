@@ -92,14 +92,26 @@ impl Item {
         .await
     }
 
-    pub async fn from_ids(ids: Vec<i32>, conn: &DbConn) -> Result<Vec<Item>> {
+    pub async fn from_ids(
+        ids: Vec<i32>,
+        discussed_only: bool,
+        undiscussed_only: bool,
+        conn: &DbConn,
+    ) -> Result<Vec<Item>> {
         conn.run(move |c| {
-            let items: QueryResult<Vec<Item>>;
+            let mut query = all_items.into_boxed();
             if ids.len() > 0 {
-                items = all_items.filter(item_id.eq_any(ids)).get_results::<Item>(c);
-            } else {
-                items = all_items.get_results::<Item>(c);
+                query = query.filter(item_id.eq_any(ids));
             }
+            if discussed_only {
+                query = query
+                    .filter(item_discussed_on.is_not_null())
+            } else if undiscussed_only {
+                query = query
+                    .filter(item_discussed_on.is_null())
+            }
+
+            let items = query.get_results::<Item>(c);
 
             Ok(items.context("Failed to retrieve items form db.")?)
         })

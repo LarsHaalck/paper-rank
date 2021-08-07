@@ -18,21 +18,39 @@ enum PrankCtl {
 
 #[derive(StructOpt, Debug)]
 enum UsersSubcommand {
-    Approve(Options),
-    Reject(Options),
-    Show(Options),
+    Approve(IdOptions),
+    Reject(IdOptions),
+    Show(IdOptions),
     Delete(IdsOnly),
     GeneratePassword { id: i32 },
 }
 
 #[derive(StructOpt, Debug)]
 enum ItemsSubcommand {
-    Show(Options),
+    Show {
+        #[structopt(flatten)]
+        id_opt: IdOptions,
+        #[structopt(flatten)]
+        date_opt: ItemDateOption,
+    },
     Delete(IdsOnly),
-    DiscussOn { id: i32, date: NaiveDate },
-    CancelDiscuss { id: i32 },
+    DiscussOn {
+        id: i32,
+        date: NaiveDate,
+    },
+    CancelDiscuss {
+        id: i32,
+    },
     Dump(ItemDumpCommand),
     Mail(MailCommand),
+}
+
+#[derive(StructOpt, Debug)]
+struct ItemDateOption {
+    #[structopt(long, conflicts_with_all = &["discussed"])]
+    undiscussed: bool,
+    #[structopt(long, conflicts_with_all = &["undiscussed"])]
+    discussed: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -62,7 +80,7 @@ struct MailCommand {
 }
 
 #[derive(StructOpt, Debug)]
-struct Options {
+struct IdOptions {
     #[structopt(long)]
     all: bool,
     #[structopt(conflicts_with = "all", required_unless = "all")]
@@ -117,8 +135,9 @@ fn format_item(item: &Item, html: bool) -> String {
 async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()> {
     use ItemsSubcommand::*;
     return match cmd {
-        Show(o) => {
-            let items = Item::from_ids(o.ids, conn).await?;
+        Show { id_opt, date_opt } => {
+            let items =
+                Item::from_ids(id_opt.ids, date_opt.discussed, date_opt.undiscussed, conn).await?;
             println!("Found {} items", items.len());
             items.iter().for_each(|u| {
                 println!(
