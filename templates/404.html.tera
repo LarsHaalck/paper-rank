@@ -1,7 +1,7 @@
 {% extends "base" %}
 {% block content %}
 <div class="alert alert-danger" role="alert">
-  404 - This page does not exists or you don't the required permissions.
+  404 - This page does not exist or you don't have the required permissions.
 </div>
 <div class="alert alert-light fixed-bottom" role="alert">
   It's just a prank, bro!
