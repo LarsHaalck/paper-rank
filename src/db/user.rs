@@ -57,7 +57,7 @@ mod password {
             PasswordHash::new(hash).map_err(|_| Error::msg("Failed reading password."))?;
         Pbkdf2
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_err(|_| Error::msg("Failed reading password."))?;
+            .map_err(|_| Error::msg("Wrong password."))?;
         Ok(())
     }
 
