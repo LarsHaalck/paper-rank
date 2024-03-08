@@ -1,5 +1,6 @@
 use super::*;
 
+use rocket::http::Status;
 use rocket::outcome::{try_outcome, IntoOutcome};
 use rocket::request::{FromRequest, Outcome, Request};
 
@@ -36,7 +37,7 @@ pub struct AdminUser<'a> {
 }
 
 #[derive(FromForm, Insertable, Debug)]
-#[table_name = "users"]
+#[diesel(table_name = self::schema::users)]
 pub struct NewUser {
     pub username: String,
     pub password: String,
@@ -256,7 +257,7 @@ impl<'r> FromRequest<'r> for &'r User {
             })
             .await;
 
-        user_result.as_ref().or_forward(())
+        user_result.as_ref().or_forward(Status::Unauthorized)
     }
 }
 
@@ -269,7 +270,7 @@ impl<'r> FromRequest<'r> for AdminUser<'r> {
         if user.is_admin {
             Outcome::Success(AdminUser { user })
         } else {
-            Outcome::Forward(())
+            Outcome::Forward(Status::Unauthorized)
         }
     }
 }

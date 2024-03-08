@@ -5,7 +5,7 @@ use itertools::Itertools;
 use rcir;
 
 #[derive(Queryable, Insertable, Debug, Clone)]
-#[table_name = "votes"]
+#[diesel(table_name = self::schema::votes)]
 pub struct Vote {
     pub user_id: i32,
     pub item_id: i32,
@@ -19,7 +19,7 @@ pub struct Ballot {
 
 impl Vote {
     pub async fn run_election(conn: &DbConn) -> Option<Item> {
-        conn.run(move |c| {
+        conn.run(move |mut c| {
             let votes = all_votes
                 .inner_join(all_items)
                 .filter(item_discussed_on.is_null())
@@ -28,13 +28,13 @@ impl Vote {
                 .get_results::<Vote>(c)
                 .ok()?;
 
-            Vote::election_driver(&votes, &c)
+            Vote::election_driver(&votes, &mut c)
         })
         .await
     }
 
     pub async fn run_second_election(conn: &DbConn, winner: Option<Item>) -> Option<Item> {
-        conn.run(move |c| {
+        conn.run(move |mut c| {
             let winner = winner.as_ref()?;
             let votes = all_votes
                 .inner_join(all_items)
@@ -45,12 +45,12 @@ impl Vote {
                 .get_results::<Vote>(c)
                 .ok()?;
 
-            Vote::election_driver(&votes, &c)
+            Vote::election_driver(&votes, &mut c)
         })
         .await
     }
 
-    fn election_driver(votes: &Vec<Vote>, c: &SqliteConnection) -> Option<Item> {
+    fn election_driver(votes: &Vec<Vote>, c: &mut SqliteConnection) -> Option<Item> {
         // the extra collections here are sad.
         let votes: Vec<Vec<_>> = votes
             .into_iter()

@@ -12,7 +12,7 @@ pub struct Item {
 }
 
 #[derive(FromForm, Insertable)]
-#[table_name = "items"]
+#[diesel(table_name = self::schema::items)]
 pub struct NewItemData {
     pub title: String,
     pub html: String,

@@ -50,7 +50,7 @@ async fn login(
 
 #[post("/logout")]
 fn logout(jar: &CookieJar<'_>) -> Flash<Redirect> {
-    jar.remove_private(Cookie::named("user_id"));
+    jar.remove_private(Cookie::from("user_id"));
     Flash::success(Redirect::to(uri!(user)), "Successfully logged out.")
 }
 
