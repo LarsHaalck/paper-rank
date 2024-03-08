@@ -55,10 +55,8 @@ struct ItemDateOption {
 
 #[derive(StructOpt, Debug)]
 struct ItemDumpCommand {
-    #[structopt(long, conflicts_with = "markdown", required_unless = "markdown")]
+    #[structopt(long)]
     html: bool,
-    #[structopt(long, conflicts_with = "html", required_unless = "html")]
-    markdown: bool,
     id: i32,
 }
 
@@ -79,6 +77,7 @@ struct MailCommand {
     server: String,
 }
 
+#[allow(dead_code)]
 #[derive(StructOpt, Debug)]
 struct IdOptions {
     #[structopt(long)]

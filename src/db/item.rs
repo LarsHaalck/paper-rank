@@ -56,7 +56,7 @@ impl Item {
                 .ok()?;
 
             let item_date = item.discussed_on?;
-            let today: NaiveDate = Utc::today().naive_utc();
+            let today: NaiveDate = Utc::now().naive_utc().into();
             if today <= item_date {
                 return Some(item);
             }

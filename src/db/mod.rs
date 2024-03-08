@@ -46,10 +46,6 @@ mod schema {
     allow_tables_to_appear_in_same_query!(users, items, votes);
 }
 
-use self::schema::items;
-use self::schema::users;
-use self::schema::votes;
-
 use self::schema::items::dsl::{
     discussed_on as item_discussed_on, id as item_id, items as all_items,
 };

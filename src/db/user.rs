@@ -114,7 +114,7 @@ impl NewUser {
             diesel::insert_into(all_users)
                 .values(&new_user)
                 .execute(c)
-                .context("Failed to write into db.")?;
+                .map_err(Error::msg)?;
             Ok(())
         })
         .await
