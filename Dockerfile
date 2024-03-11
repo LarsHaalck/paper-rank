@@ -1,4 +1,4 @@
-FROM rust:1.56.1 as builder
+FROM rust:1.76.0 as builder
 WORKDIR /usr/src/prank
 COPY Cargo.toml ./
 COPY src  ./src
