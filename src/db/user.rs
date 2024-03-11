@@ -209,6 +209,26 @@ impl User {
         .await
     }
 
+    pub async fn set_admin(ids: Vec<i32>, value: bool, conn: &DbConn) -> Result<usize> {
+        conn.run(move |c| {
+            let rows: QueryResult<usize>;
+            if ids.len() > 0 {
+                rows = diesel::update(
+                    all_users.filter(user_id.eq_any(ids).and(user_admin.eq(!value))),
+                )
+                .set(user_admin.eq(value))
+                .execute(c);
+            } else {
+                rows = diesel::update(all_users.filter(user_admin.eq(!value)))
+                    .set(user_admin.eq(value))
+                    .execute(c);
+            }
+            let rows = rows.context("Failed to set admin users in db.")?;
+            Ok(rows)
+        })
+        .await
+    }
+
     pub async fn set_approve(ids: Vec<i32>, value: bool, conn: &DbConn) -> Result<usize> {
         conn.run(move |c| {
             let rows: QueryResult<usize>;

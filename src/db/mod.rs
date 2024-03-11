@@ -50,7 +50,7 @@ use self::schema::items::dsl::{
     discussed_on as item_discussed_on, id as item_id, items as all_items,
 };
 use self::schema::users::dsl::{
-    id as user_id, is_approved as user_approved, password as user_password,
+    id as user_id, is_admin as user_admin, is_approved as user_approved, password as user_password,
     username as user_username, users as all_users,
 };
 use self::schema::votes::dsl::{

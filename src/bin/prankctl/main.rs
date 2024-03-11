@@ -94,6 +94,16 @@ struct IdsOnly {
 async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()> {
     use UsersSubcommand::*;
     return match cmd {
+        Admin(o) => {
+            let rows = User::set_admin(o.ids, true, conn).await?;
+            println!("Made {} admins", rows);
+            Ok(())
+        }
+        RemoveAdmin(o) => {
+            let rows = User::set_admin(o.ids, false, conn).await?;
+            println!("Removed {} admins", rows);
+            Ok(())
+        }
         Approve(o) => {
             let rows = User::set_approve(o.ids, true, conn).await?;
             println!("Approved {} users", rows);
