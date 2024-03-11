@@ -13,7 +13,7 @@ This tool started as a fork of
 * History site, where old entries are archived
 * Pin upcoming topics to make them unvotable but still show them to all users
 * Dockerfile and docker-compose for easy deployment
-* small adming page to edit items and change the dates
+* small admin page to edit items and change the dates
 
 As the original version [jonhoo/vote.rs](https://github.com/jonhoo/vote.rs),
 this tool uses 
@@ -62,7 +62,7 @@ prankctl users approve <id>
 where a user id can be found using
 
 ```console
-prankctl users show --all
+prankctl users list --all
 ```
 
 For other commands see
@@ -70,12 +70,17 @@ For other commands see
 prankctl --help
 ```
 
+Admins can be added using:
+```console
+prankctl users admin <id>
+```
+
 
 ### Item Management
 Items can be added by every user using the button `New Item` in the navigation bar.
 
-Pinning a topic before the event should be done by using the site `/show`.
-An item can be edited by clicking the edit button and then changing the date.
+Pinning a topic before the event should be done by using the site `/show` (only available to admins).
+An item can be edited by clicking the edit button and then changing the date and emailed using the email button.
 
 The cli tool can also be used using
 ```console
