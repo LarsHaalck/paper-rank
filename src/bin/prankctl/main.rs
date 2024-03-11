@@ -22,14 +22,14 @@ enum UsersSubcommand {
     RemoveAdmin(IdOptions),
     Approve(IdOptions),
     Reject(IdOptions),
-    Show(IdOptions),
+    List(IdOptions),
     Delete(IdsOnly),
     GeneratePassword { id: i32 },
 }
 
 #[derive(StructOpt, Debug)]
 enum ItemsSubcommand {
-    Show {
+    List {
         #[structopt(flatten)]
         id_opt: IdOptions,
         #[structopt(flatten)]
@@ -109,7 +109,7 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()>
             println!("Deleted {} users", rows);
             Ok(())
         }
-        Show(o) => {
+        List(o) => {
             let users = User::from_ids(o.ids, conn).await?;
             println!("Found {} users", users.len());
             users.iter().for_each(|u| println!("{:?}", u));
@@ -126,7 +126,7 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()>
 async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()> {
     use ItemsSubcommand::*;
     return match cmd {
-        Show { id_opt, date_opt } => {
+        List { id_opt, date_opt } => {
             let items =
                 Item::from_ids(id_opt.ids, date_opt.discussed, date_opt.undiscussed, conn).await?;
             println!("Found {} items", items.len());
