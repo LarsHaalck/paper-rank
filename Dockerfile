@@ -4,7 +4,7 @@ COPY Cargo.toml ./
 COPY src  ./src
 RUN cargo install --path .
 
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 WORKDIR /opt/prank
 COPY static ./static
 COPY templates ./templates
