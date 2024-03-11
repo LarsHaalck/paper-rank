@@ -11,6 +11,7 @@ pub type Empty = HashMap<i32, i32>;
 struct Context {
     flash: Option<(String, String)>,
     username: Option<String>,
+    is_admin: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -56,6 +57,7 @@ impl Context {
         Context {
             flash,
             username: None,
+            is_admin: None
         }
     }
 
@@ -63,6 +65,7 @@ impl Context {
         Context {
             flash,
             username: Some(user.username.clone()),
+            is_admin: Some(user.is_admin)
         }
     }
 }
