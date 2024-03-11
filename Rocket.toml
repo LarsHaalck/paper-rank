@@ -1,6 +1,12 @@
 [global]
 template_dir = "templates"
 static_dir = "static"
+email_from = ""
+email_to = ""
+email_comment = ""
+email_username = ""
+email_server = ""
+
 
 [global.databases.sqlite_database]
 url = "db/db.sqlite"

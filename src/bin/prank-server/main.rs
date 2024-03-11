@@ -11,15 +11,15 @@ use rocket::http::{Cookie, CookieJar, Status};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::json::Json;
-use rocket::Request;
+use rocket::{fairing::AdHoc, Request, State};
 use rocket_dyn_templates::Template;
 
-use context::{EditContext, Empty, ItemContext, UserContext, VoteContext};
+use context::{EditContext, Empty, ItemContext, MailContext, UserContext, VoteContext};
 use markdown::markdown_to_html;
-use prank::item::{ChangeItemData, Item, NewItemData};
+use prank::item::{ChangeItemData, Item, MailItemData, NewItemData};
 use prank::user::{AdminUser, NewPassword, NewUser, User};
 use prank::vote::{Ballot, Vote};
-use prank::DbConn;
+use prank::{DbConn, MailConfig};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Post Routes
@@ -125,6 +125,21 @@ async fn update_item(item: Form<ChangeItemData>, _user: &User, conn: DbConn) -> 
     }
 }
 
+#[post("/mail_item", data = "<item>")]
+async fn mail_item(
+    item: Form<MailItemData>,
+    _admin: AdminUser<'_>,
+    conn: DbConn,
+) -> Flash<Redirect> {
+    let item_data = item.into_inner();
+    let id = item_data.id;
+    let res = Item::mail(item_data, &conn).await;
+    match res {
+        Ok(_) => Flash::success(Redirect::to(uri!(index)), "Mailed item"),
+        Err(e) => Flash::error(Redirect::to(uri!(mail_form(id = id))), e.to_string()),
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // GET Routes
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,6 +163,21 @@ async fn edit_id(
     Template::render(
         "item",
         EditContext::for_user(id, admin.user, &conn, flash).await,
+    )
+}
+
+#[get("/mail?<id>")]
+async fn mail_form(
+    id: i32,
+    flash: Option<FlashMessage<'_>>,
+    admin: AdminUser<'_>,
+    mail_config: &State<MailConfig>,
+    conn: DbConn,
+) -> Template {
+    let flash = flash.map(FlashMessage::into_inner);
+    Template::render(
+        "mail",
+        MailContext::new(id, admin.user, mail_config, &conn, flash).await,
     )
 }
 
@@ -200,11 +230,14 @@ fn rocket() -> _ {
     let rocket = rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
+        .attach(AdHoc::config::<MailConfig>())
         .register("/", catchers![not_found])
         .mount(
             // get routes
             "/",
-            routes![index, index_user, new_item, user, user_user, history, edit, edit_id],
+            routes![
+                index, index_user, new_item, user, user_user, history, edit, edit_id, mail_form
+            ],
         )
         .mount(
             // post routes
@@ -217,11 +250,12 @@ fn rocket() -> _ {
                 vote,
                 preview,
                 add_new_item,
-                update_item
+                update_item,
+                mail_item
             ],
         );
 
-    // retrieve static_dir paramtere from config and mount static route
+    // retrieve static_dir paramter from config and mount static route
     let static_dir = rocket
         .figment()
         .extract_inner::<RelativePathBuf>("static_dir")

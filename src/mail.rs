@@ -1,20 +1,17 @@
 use lettre::message::{header, MultiPart, SinglePart};
 use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
 
+use crate::item::{Item, ItemFormat};
 use anyhow::{Context, Result};
-use prank::item::Item;
 
-use crate::format_item;
-
-fn format_comment(comment: &Option<String>, html: bool) -> String {
+fn format_comment(comment: &Option<String>, item_format: ItemFormat) -> String {
     match comment {
         Some(c) => {
             // TODO: why is this needed?
             let c = c.replace("\\n", "\n");
-            if html {
-                format!("\n<hr><p>{}</p>", c)
-            } else {
-                format!("\n\n-------\n{}", c)
+            match item_format {
+                ItemFormat::HTML => format!("\n<hr><p>{}</p>", c),
+                ItemFormat::Markdown => format!("\n\n-------\n{}", c),
             }
         }
         None => String::new(),
@@ -25,22 +22,19 @@ pub fn send(
     item: &Item,
     from: String,
     to: String,
-    subject: Option<String>,
     comment: Option<String>,
     user: String,
     server: String,
+    password: String,
 ) -> Result<()> {
-    let subject = match subject {
-        Some(s) => s,
-        None => match item.discussed_on {
-            Some(d) => format!("Next Paper for {:?}: {}", d, item.title),
-            None => format!("Next Paper: {}", item.title),
-        },
+    let subject = match item.discussed_on {
+        Some(d) => format!("Next Paper for {:?}: {}", d, item.title),
+        None => format!("Next Paper: {}", item.title),
     };
 
     let email = Message::builder()
-        .from(from.parse()?)
-        .to(to.parse()?)
+        .from(from.parse().with_context(|| format!("Failed to parse email field from: {}", from))?)
+        .to(to.parse().with_context(|| format!("Failed to parse email field to: {}", to))?)
         .subject(subject)
         .multipart(
             MultiPart::alternative()
@@ -49,8 +43,8 @@ pub fn send(
                         .header(header::ContentType::parse("text/markdown").unwrap())
                         .body(format!(
                             "{}{}",
-                            format_item(item, false),
-                            format_comment(&comment, false)
+                            item.format(ItemFormat::Markdown),
+                            format_comment(&comment, ItemFormat::Markdown)
                         )),
                 )
                 .singlepart(
@@ -58,17 +52,13 @@ pub fn send(
                         .header(header::ContentType::TEXT_HTML)
                         .body(format!(
                             "{}{}",
-                            format_item(item, true),
-                            format_comment(&comment, true)
+                            item.format(ItemFormat::HTML),
+                            format_comment(&comment, ItemFormat::HTML)
                         )),
                 ),
         )?;
 
-    let creds = Credentials::new(
-        user,
-        rpassword::prompt_password_stdout("Password: ").context("Error getting password")?,
-    );
-
+    let creds = Credentials::new(user, password);
     let mailer = SmtpTransport::starttls_relay(&server)?
         .credentials(creds)
         .build();

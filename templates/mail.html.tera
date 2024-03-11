@@ -1,0 +1,34 @@
+{% extends "base" %}
+{% block content %}
+<h3>Sending Email for item titled {{ item.title }} with id {{ item.id }}</h3>
+<form action="mail_item" method="post">
+  <input type="hidden" name="id" value="{{ item.id }}" required>
+  <div class="form-group">
+    <label for="from">From:</label>
+    <input type="text" class="form-control" name="from" value="{{ config.email_from }}" required>
+  </div>
+  <div class="form-group">
+    <label for="to">To:</label>
+    <input type="text" class="form-control" name="to" value="{{ config.email_to }}" required>
+  </div>
+  <div class="form-group">
+    <label for="comment">Comment:</label>
+    <input type="text" class="form-control" name="comment" value="{{ config.email_comment }}">
+  </div>
+  <div class="form-group">
+    <label for="username">Username:</label>
+    <input type="text" class="form-control" name="username" value="{{ config.email_username }}" required>
+  </div>
+  <div class="form-group">
+    <label for="server">Server:</label>
+    <input type="text" class="form-control" name="server" value="{{ config.email_server }}" required>
+  </div>
+  <div class="form-group">
+    <label for="password">Password:</label>
+    <input type="password" class="form-control" name="password" placeholder="Password" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}
+{% block head %}
+{% endblock %}

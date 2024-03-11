@@ -1,3 +1,4 @@
+use prank::MailConfig;
 use rocket::serde::Serialize;
 
 use crate::{DbConn, Item, User, Vote};
@@ -39,6 +40,14 @@ pub struct UserContext {
 #[serde(crate = "rocket::serde")]
 pub struct EditContext {
     item: Option<Item>,
+    context: Context,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct MailContext {
+    item: Option<Item>,
+    config: MailConfig,
     context: Context,
 }
 
@@ -132,6 +141,22 @@ impl EditContext {
     ) -> EditContext {
         EditContext {
             item: Item::from_id(id, conn).await,
+            context: Context::for_user(user, flash),
+        }
+    }
+}
+
+impl MailContext {
+    pub async fn new(
+        id: i32,
+        user: &User,
+        config: &MailConfig,
+        conn: &DbConn,
+        flash: Option<(String, String)>,
+    ) -> MailContext {
+        MailContext {
+            item: Item::from_id(id, conn).await,
+            config: config.clone(),
             context: Context::for_user(user, flash),
         }
     }

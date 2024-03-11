@@ -1,5 +1,8 @@
+use crate::mail;
+
 use super::*;
 
+use anyhow::Error;
 use chrono::{NaiveDate, Utc};
 
 #[derive(Serialize, Queryable, Debug, Clone)]
@@ -26,6 +29,22 @@ pub struct ChangeItemData {
     pub html: String,
     pub markdown: String,
     pub discussed_on: String,
+}
+
+#[derive(FromForm)]
+pub struct MailItemData {
+    pub id: i32,
+    pub from: String,
+    pub to: String,
+    pub comment: Option<String>,
+    pub username: String,
+    pub server: String,
+    pub password: String,
+}
+
+pub enum ItemFormat {
+    HTML,
+    Markdown,
 }
 
 impl Item {
@@ -104,11 +123,9 @@ impl Item {
                 query = query.filter(item_id.eq_any(ids));
             }
             if discussed_only {
-                query = query
-                    .filter(item_discussed_on.is_not_null())
+                query = query.filter(item_discussed_on.is_not_null())
             } else if undiscussed_only {
-                query = query
-                    .filter(item_discussed_on.is_null())
+                query = query.filter(item_discussed_on.is_null())
             }
 
             let items = query.get_results::<Item>(c);
@@ -169,5 +186,28 @@ impl Item {
             Ok(())
         })
         .await
+    }
+
+    pub fn format(&self, item_format: ItemFormat) -> String {
+        match item_format {
+            ItemFormat::HTML => format!("<h3>{}</h3>\n{}", self.title, self.html),
+            ItemFormat::Markdown => format!("{}\n-------\n{}", self.title, self.markdown),
+        }
+    }
+
+    pub async fn mail(mail_data: MailItemData, conn: &DbConn) -> Result<()> {
+        let item = Item::from_id(mail_data.id, conn)
+            .await
+            .ok_or(Error::msg("Could not retrieve item from database"))?;
+        mail::send(
+            &item,
+            mail_data.from,
+            mail_data.to,
+            mail_data.comment,
+            mail_data.username,
+            mail_data.server,
+            mail_data.password,
+        )?;
+        Ok(())
     }
 }

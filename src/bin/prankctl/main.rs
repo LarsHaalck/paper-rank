@@ -1,13 +1,13 @@
 use structopt::StructOpt;
 
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use chrono::NaiveDate;
-use prank::item::Item;
+use prank::item::{Item, ItemFormat};
 use prank::user::User;
 use prank::DbConn;
 use rocket::fairing::Fairing;
 
-mod mail;
+use prank::mail;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "prankctl: CLI tool to manage prank")]
@@ -18,6 +18,8 @@ enum PrankCtl {
 
 #[derive(StructOpt, Debug)]
 enum UsersSubcommand {
+    Admin(IdOptions),
+    RemoveAdmin(IdOptions),
     Approve(IdOptions),
     Reject(IdOptions),
     Show(IdOptions),
@@ -67,8 +69,6 @@ struct MailCommand {
     from: String,
     #[structopt(short = "t", long)]
     to: String,
-    #[structopt(short = "s", long)]
-    subject: Option<String>,
     #[structopt(short = "c", long)]
     comment: Option<String>,
     #[structopt(short = "u", long)]
@@ -123,14 +123,6 @@ async fn handle_users_command(cmd: UsersSubcommand, conn: &DbConn) -> Result<()>
     };
 }
 
-fn format_item(item: &Item, html: bool) -> String {
-    if html {
-        format!("<h3>{}</h3>\n{}", item.title, item.html)
-    } else {
-        format!("{}\n-------\n{}", item.title, item.markdown)
-    }
-}
-
 async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()> {
     use ItemsSubcommand::*;
     return match cmd {
@@ -167,15 +159,24 @@ async fn handle_items_command(cmd: ItemsSubcommand, conn: &DbConn) -> Result<()>
                 .ok_or(Error::msg("Item not found"))?;
             println!("Dump of item with id {}:", o.id);
             println!("##############################");
-            println!("{}", format_item(&item, o.html));
+            println!(
+                "{}",
+                item.format(if o.html {
+                    ItemFormat::HTML
+                } else {
+                    ItemFormat::Markdown
+                })
+            );
             Ok(())
         }
         Mail(o) => {
             let item = Item::from_id(o.id, conn)
                 .await
                 .ok_or(Error::msg("Item not found"))?;
+            let password = rpassword::prompt_password_stdout("Password: ")
+                .context("Error getting password")?;
             mail::send(
-                &item, o.from, o.to, o.subject, o.comment, o.username, o.server,
+                &item, o.from, o.to, o.comment, o.username, o.server, password,
             )?;
             println!("Send mail was successful");
             Ok(())

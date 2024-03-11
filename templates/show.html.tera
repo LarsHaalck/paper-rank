@@ -3,9 +3,14 @@
 {% for item in items %}
 <details class="card">
     <summary class="card-body">
-        <a href="/edit?id={{ item.id }}">
+        <form class="form-inline" action="/edit" method="get" style="display: inline">
+            <input type="hidden" name="id" value="{{item.id}}">
             <button type="submit" class="btn btn-warning">Edit...</button>
-        </a>
+        </form>
+        <form class="form-inline" action="/mail" method="get" style="display: inline">
+            <input type="hidden" name="id" value="{{item.id}}">
+            <button type="submit" class="btn btn-danger">!Mail!</button>
+        </form>
         <b class="card-title d-inline">{{ item.title }}</b>
         <span class="float-right">{{ item.discussed_on }}</span>
     </summary>
